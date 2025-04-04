@@ -26,8 +26,8 @@ const HeroSection: React.FC = () => {
           <div className="md:w-1/2 animate-slide-up">
             <div className="relative rounded-lg overflow-hidden shadow-2xl">
               <img 
-                src="https://images.unsplash.com/photo-1649972904349-6e44c42644a7" 
-                alt="Salon professional styling hair" 
+                src="https://images.unsplash.com/photo-1560066984-138dadb4c035" 
+                alt="Professional hair salon" 
                 className="w-full h-auto object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>

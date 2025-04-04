@@ -72,8 +72,8 @@ const NavLinks: React.FC<{ mobile?: boolean }> = ({ mobile }) => {
   return (
     <>
       <a href="#services" className={linkClasses}>Services</a>
+      <Link to="/products" className={linkClasses}>Products</Link>
       <a href="#about" className={linkClasses}>About</a>
-      <a href="#testimonials" className={linkClasses}>Testimonials</a>
       <a href="#contact" className={linkClasses}>Contact</a>
     </>
   );

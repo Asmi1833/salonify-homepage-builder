@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import SalonifyLogo from './SalonifyLogo';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
 
@@ -29,10 +30,10 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="font-bold text-lg mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-salon transition-colors">Home</a></li>
+              <li><Link to="/" className="text-muted-foreground hover:text-salon transition-colors">Home</Link></li>
               <li><a href="#services" className="text-muted-foreground hover:text-salon transition-colors">Services</a></li>
+              <li><Link to="/products" className="text-muted-foreground hover:text-salon transition-colors">Products</Link></li>
               <li><a href="#about" className="text-muted-foreground hover:text-salon transition-colors">About</a></li>
-              <li><a href="#gallery" className="text-muted-foreground hover:text-salon transition-colors">Gallery</a></li>
               <li><a href="#contact" className="text-muted-foreground hover:text-salon transition-colors">Contact</a></li>
             </ul>
           </div>

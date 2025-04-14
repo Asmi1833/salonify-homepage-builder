@@ -9,16 +9,19 @@ import SalonNavbar from '@/components/SalonNavbar';
 import Footer from '@/components/Footer';
 import AdminProducts from '@/components/AdminProducts';
 import AdminLocations from '@/components/AdminLocations';
-import { Lock } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import { UserPlus, Lock } from 'lucide-react';
 
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "salon123";
+// We'll store admin credentials in localStorage
+const ADMIN_STORAGE_KEY = 'salonAdminUsers';
 
 const Admin: React.FC = () => {
+  const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginError, setLoginError] = useState(false);
+  const [signupError, setSignupError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,20 +32,62 @@ const Admin: React.FC = () => {
     }
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      localStorage.setItem('salonAdminAuth', 'true');
-      setLoginError(false);
-    } else {
-      setLoginError(true);
+    setSignupError('');
+
+    // Validate inputs
+    if (!fullName || !username || !password || !confirmPassword) {
+      setSignupError('All fields are required');
+      return;
     }
+
+    if (password !== confirmPassword) {
+      setSignupError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setSignupError('Password must be at least 6 characters long');
+      return;
+    }
+
+    // Get existing admins or initialize empty array
+    const existingAdmins = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) || '[]');
+    
+    // Check if username already exists
+    if (existingAdmins.some((admin: any) => admin.username === username)) {
+      setSignupError('Username already exists');
+      return;
+    }
+
+    // Add new admin
+    const newAdmin = {
+      fullName,
+      username,
+      password, // In a real app, this would be hashed
+      createdAt: new Date().toISOString()
+    };
+
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify([...existingAdmins, newAdmin]));
+    
+    // Set as authenticated
+    localStorage.setItem('salonAdminAuth', 'true');
+    localStorage.setItem('currentAdminUser', username);
+    
+    setIsAuthenticated(true);
+    
+    // Show success message
+    toast({
+      title: "Admin account created",
+      description: "You've successfully created an admin account and logged in.",
+    });
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('salonAdminAuth');
+    localStorage.removeItem('currentAdminUser');
     navigate('/admin');
   };
 
@@ -54,24 +99,39 @@ const Admin: React.FC = () => {
           <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
             <div className="text-center">
               <div className="inline-flex p-3 rounded-full bg-secondary/20 mx-auto">
-                <Lock className="h-8 w-8 text-salon" />
+                <UserPlus className="h-8 w-8 text-salon" />
               </div>
-              <h2 className="mt-6 text-3xl font-extrabold">Admin Panel</h2>
+              <h2 className="mt-6 text-3xl font-extrabold">Create Admin Account</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Sign in to access the admin dashboard
+                Sign up to access the admin dashboard
               </p>
             </div>
             
-            <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-              {loginError && (
+            <form className="mt-8 space-y-6" onSubmit={handleSignup}>
+              {signupError && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    Invalid username or password. Please try again.
+                    {signupError}
                   </AlertDescription>
                 </Alert>
               )}
               
               <div className="space-y-4">
+                <div>
+                  <label htmlFor="fullName" className="block text-sm font-medium mb-1">
+                    Full Name
+                  </label>
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    required
+                    placeholder="Your full name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </div>
+                
                 <div>
                   <label htmlFor="username" className="block text-sm font-medium mb-1">
                     Username
@@ -81,7 +141,7 @@ const Admin: React.FC = () => {
                     name="username"
                     type="text"
                     required
-                    placeholder="Admin username"
+                    placeholder="Choose a username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                   />
@@ -96,9 +156,24 @@ const Admin: React.FC = () => {
                     name="password"
                     type="password"
                     required
-                    placeholder="Admin password"
+                    placeholder="Create a password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
+                    Confirm Password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                   />
                 </div>
               </div>
@@ -107,7 +182,7 @@ const Admin: React.FC = () => {
                 type="submit" 
                 className="w-full bg-salon hover:bg-salon-dark text-white"
               >
-                Sign in
+                Create Account & Login
               </Button>
             </form>
           </div>

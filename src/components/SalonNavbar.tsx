@@ -1,93 +1,118 @@
 
 import React, { useState } from 'react';
-import { X, Menu, MapPin, ShoppingBag, Home, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import SalonifyLogo from './SalonifyLogo';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu, X } from 'lucide-react';
 
 const SalonNavbar: React.FC = () => {
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const isLinkActive = (path: string) => location.pathname === path;
+
+  const navLinks = [
+    { path: '/', label: 'Home' },
+    { path: '/products', label: 'Products' },
+    { path: '/locations', label: 'Locations' },
+    { path: '/recommendations', label: 'Smart Style' },
+  ];
 
   return (
-    <nav className="py-4 border-b border-border">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="salon-container">
-        <div className="flex justify-between items-center">
-          <Link to="/">
-            <SalonifyLogo />
+        <div className="flex h-16 items-center justify-between">
+          <Link to="/" className="flex items-center space-x-2">
+            <SalonifyLogo className="w-8 h-8" />
+            <span className="text-xl font-bold">Salonify</span>
           </Link>
-          
+
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <NavLinks />
-            <div className="flex items-center space-x-4">
+          <nav className="hidden md:flex items-center space-x-6">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`text-sm transition-colors hover:text-salon ${
+                  isLinkActive(link.path)
+                    ? 'text-foreground font-medium'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="flex items-center space-x-2">
               <Link to="/login">
-                <Button variant="ghost" className="hover:text-salon transition-colors">Login</Button>
-              </Link>
-              <Link to="/signup">
-                <Button className="bg-salon hover:bg-salon-dark text-white">Sign Up</Button>
-              </Link>
-            </div>
-          </div>
-          
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button onClick={toggleMenu} className="p-2">
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          </div>
-        </div>
-        
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden pt-4 pb-2 animate-fade-in">
-            <div className="flex flex-col space-y-4">
-              <NavLinks mobile />
-              <Link to="/login" className="w-full">
-                <Button variant="ghost" className="w-full hover:text-salon transition-colors">
+                <Button variant="outline" size="sm">
                   Login
                 </Button>
               </Link>
-              <Link to="/signup" className="w-full">
-                <Button className="bg-salon hover:bg-salon-dark text-white w-full">
+              <Link to="/signup">
+                <Button size="sm" className="bg-salon hover:bg-salon-dark">
                   Sign Up
                 </Button>
               </Link>
             </div>
-          </div>
-        )}
+          </nav>
+
+          {/* Mobile Navigation */}
+          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[80%] sm:w-[350px]">
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between mb-6">
+                  <Link to="/" className="flex items-center space-x-2" onClick={() => setIsMenuOpen(false)}>
+                    <SalonifyLogo className="w-6 h-6" />
+                    <span className="text-lg font-bold">Salonify</span>
+                  </Link>
+                  <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
+                    <X className="h-5 w-5" />
+                    <span className="sr-only">Close menu</span>
+                  </Button>
+                </div>
+
+                <nav className="flex flex-col space-y-4">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`py-2 transition-colors hover:text-salon ${
+                        isLinkActive(link.path)
+                          ? 'text-foreground font-medium'
+                          : 'text-muted-foreground'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </nav>
+
+                <div className="flex flex-col space-y-3 mt-auto mb-8">
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="outline" className="w-full">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
+                    <Button className="w-full bg-salon hover:bg-salon-dark">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
-    </nav>
-  );
-};
-
-const NavLinks: React.FC<{ mobile?: boolean }> = ({ mobile }) => {
-  const linkClasses = mobile
-    ? "flex items-center gap-2 py-2 hover:text-salon transition-colors"
-    : "flex items-center gap-2 hover:text-salon transition-colors";
-
-  return (
-    <>
-      <Link to="/" className={linkClasses}>
-        <Home className="h-4 w-4" />
-        <span>Home</span>
-      </Link>
-      <Link to="/products" className={linkClasses}>
-        <ShoppingBag className="h-4 w-4" />
-        <span>Products</span>
-      </Link>
-      <Link to="/locations" className={linkClasses}>
-        <MapPin className="h-4 w-4" />
-        <span>Locations</span>
-      </Link>
-      <Link to="/admin" className={linkClasses}>
-        <User className="h-4 w-4" />
-        <span>Admin</span>
-      </Link>
-    </>
+    </header>
   );
 };
 

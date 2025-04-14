@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Upload, UserCircle } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 
 interface ProfileFormProps {
@@ -33,9 +34,12 @@ const formSchema = z.object({
   birthday: z.date().optional(),
   address: z.string().optional(),
   preferences: z.string().optional(),
+  profileImage: z.string().optional(),
 });
 
 const ProfileForm: React.FC<ProfileFormProps> = ({ user }) => {
+  const [imagePreview, setImagePreview] = useState<string | null>(user.profileImage || null);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -45,8 +49,22 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ user }) => {
       birthday: user.birthday ? new Date(user.birthday) : undefined,
       address: user.address || '',
       preferences: user.preferences || '',
+      profileImage: user.profileImage || '',
     },
   });
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageDataUrl = event.target?.result as string;
+        setImagePreview(imageDataUrl);
+        form.setValue('profileImage', imageDataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     // Update user in local storage
@@ -56,9 +74,47 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ user }) => {
     toast.success('Profile updated successfully');
   }
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase();
+  };
+
   return (
     <div className="bg-card rounded-lg p-6 border">
-      <h3 className="text-lg font-medium mb-4">Your Profile</h3>
+      <div className="flex flex-col md:flex-row gap-6 items-start md:items-center mb-6">
+        <div className="flex flex-col items-center">
+          <Avatar className="h-24 w-24 border-2 border-salon">
+            <AvatarImage src={imagePreview || ''} />
+            <AvatarFallback className="text-xl bg-salon text-white">
+              {form.watch('name') ? getInitials(form.watch('name')) : 'U'}
+            </AvatarFallback>
+          </Avatar>
+          
+          <label htmlFor="profileImage" className="cursor-pointer mt-2">
+            <div className="flex items-center gap-1 text-sm text-salon hover:text-salon-dark transition-colors">
+              <Upload className="h-3 w-3" />
+              <span>Upload photo</span>
+            </div>
+            <input 
+              type="file" 
+              id="profileImage" 
+              className="hidden" 
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+          </label>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium mb-1">Your Profile</h3>
+          <p className="text-muted-foreground text-sm">
+            Manage your personal information and preferences
+          </p>
+        </div>
+      </div>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

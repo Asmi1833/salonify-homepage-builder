@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import SalonNavbar from '@/components/SalonNavbar';
 import Footer from '@/components/Footer';
 import DashboardTabs from '@/components/DashboardTabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 
 const Dashboard: React.FC = () => {
@@ -43,6 +44,14 @@ const Dashboard: React.FC = () => {
     return <div>Loading...</div>;
   }
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase();
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <SalonNavbar />
@@ -50,11 +59,19 @@ const Dashboard: React.FC = () => {
         <div className="salon-section pt-10 md:pt-16">
           <div className="salon-container">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold">Welcome, {user.name}!</h1>
-                <p className="text-muted-foreground mt-2">
-                  Manage your appointments and profile details
-                </p>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 border-2 border-salon">
+                  <AvatarImage src={user.profileImage || ''} />
+                  <AvatarFallback className="text-lg bg-salon text-white">
+                    {user.name ? getInitials(user.name) : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold">Welcome, {user.name}!</h1>
+                  <p className="text-muted-foreground mt-2">
+                    Manage your appointments and profile details
+                  </p>
+                </div>
               </div>
               
               {user.birthday && new Date(user.birthday).getDate() === new Date().getDate() && 

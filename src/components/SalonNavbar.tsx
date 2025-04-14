@@ -1,14 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import SalonifyLogo from './SalonifyLogo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User } from 'lucide-react';
 
 const SalonNavbar: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const user = localStorage.getItem('salonifyUser');
+    setIsLoggedIn(!!user);
+  }, []);
 
   const isLinkActive = (path: string) => location.pathname === path;
 
@@ -18,6 +25,15 @@ const SalonNavbar: React.FC = () => {
     { path: '/locations', label: 'Locations' },
     { path: '/recommendations', label: 'Smart Style' },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem('salonifyUser');
+    setIsLoggedIn(false);
+    // Redirect to home page if on dashboard
+    if (location.pathname === '/dashboard') {
+      window.location.href = '/';
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -44,16 +60,36 @@ const SalonNavbar: React.FC = () => {
               </Link>
             ))}
             <div className="flex items-center space-x-2">
-              <Link to="/login">
-                <Button variant="outline" size="sm">
-                  Login
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button size="sm" className="bg-salon hover:bg-salon-dark">
-                  Sign Up
-                </Button>
-              </Link>
+              {isLoggedIn ? (
+                <>
+                  <Link to="/dashboard">
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <User size={16} />
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Button 
+                    size="sm" 
+                    className="bg-salon hover:bg-salon-dark"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login">
+                    <Button variant="outline" size="sm">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button size="sm" className="bg-salon hover:bg-salon-dark">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
 
@@ -96,16 +132,38 @@ const SalonNavbar: React.FC = () => {
                 </nav>
 
                 <div className="flex flex-col space-y-3 mt-auto mb-8">
-                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="outline" className="w-full">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full bg-salon hover:bg-salon-dark">
-                      Sign Up
-                    </Button>
-                  </Link>
+                  {isLoggedIn ? (
+                    <>
+                      <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                        <Button variant="outline" className="w-full flex items-center justify-center gap-1">
+                          <User size={16} />
+                          Dashboard
+                        </Button>
+                      </Link>
+                      <Button 
+                        className="w-full bg-salon hover:bg-salon-dark"
+                        onClick={() => {
+                          handleLogout();
+                          setIsMenuOpen(false);
+                        }}
+                      >
+                        Logout
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                        <Button variant="outline" className="w-full">
+                          Login
+                        </Button>
+                      </Link>
+                      <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
+                        <Button className="w-full bg-salon hover:bg-salon-dark">
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </SheetContent>

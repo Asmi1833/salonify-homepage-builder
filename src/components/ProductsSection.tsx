@@ -1,10 +1,12 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
-const products = [
+// Default products if nothing in localStorage
+const defaultProducts = [
   {
     id: 1,
     name: "Professional Hairdryer",
@@ -91,7 +93,24 @@ const products = [
   }
 ];
 
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+}
+
+interface CartItem extends Product {
+  quantity: number;
+}
+
 const ProductsSection: React.FC = () => {
+  const [products, setProducts] = useState<Product[]>(defaultProducts);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { toast } = useToast();
+
   // Function to format price in Indian Rupees
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -101,9 +120,185 @@ const ProductsSection: React.FC = () => {
     }).format(price);
   };
 
+  useEffect(() => {
+    // Load products from localStorage if available (from admin panel)
+    const storedProducts = localStorage.getItem('salonProducts');
+    if (storedProducts) {
+      setProducts(JSON.parse(storedProducts));
+    }
+
+    // Load cart from localStorage
+    const storedCart = localStorage.getItem('salonCart');
+    if (storedCart) {
+      setCart(JSON.parse(storedCart));
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('salonCart', JSON.stringify(cart));
+  }, [cart]);
+
+  const addToCart = (product: Product) => {
+    // Check if product is already in cart
+    const existingItem = cart.find(item => item.id === product.id);
+    
+    if (existingItem) {
+      // Update quantity if already in cart
+      const updatedCart = cart.map(item => 
+        item.id === product.id 
+          ? { ...item, quantity: item.quantity + 1 } 
+          : item
+      );
+      setCart(updatedCart);
+    } else {
+      // Add new item to cart
+      setCart([...cart, { ...product, quantity: 1 }]);
+    }
+    
+    toast({
+      title: "Added to cart",
+      description: `${product.name} has been added to your cart.`,
+    });
+  };
+
+  const getTotalCartItems = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const getTotalCartPrice = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const removeFromCart = (id: number) => {
+    setCart(cart.filter(item => item.id !== id));
+  };
+
+  const updateQuantity = (id: number, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
+    setCart(cart.map(item => 
+      item.id === id 
+        ? { ...item, quantity: newQuantity } 
+        : item
+    ));
+  };
+
   return (
     <section className="salon-section bg-secondary/50">
       <div className="salon-container">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Featured Products</h2>
+          <Button
+            variant="outline"
+            className="relative"
+            onClick={() => setIsCartOpen(!isCartOpen)}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {getTotalCartItems() > 0 && (
+              <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-salon text-white text-xs flex items-center justify-center">
+                {getTotalCartItems()}
+              </span>
+            )}
+          </Button>
+        </div>
+
+        {/* Shopping Cart */}
+        {isCartOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex justify-end">
+            <div className="bg-white w-full max-w-md h-full overflow-y-auto p-6 animate-slide-in-right">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold">Your Cart</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsCartOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              
+              {cart.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-muted-foreground">Your cart is empty</p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsCartOpen(false)}
+                    className="mt-4"
+                  >
+                    Continue Shopping
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-4 mb-6">
+                    {cart.map(item => (
+                      <div key={item.id} className="flex border-b pb-4">
+                        <img 
+                          src={item.image} 
+                          alt={item.name}
+                          className="h-20 w-20 object-cover rounded"
+                        />
+                        <div className="ml-4 flex-grow">
+                          <h4 className="font-medium">{item.name}</h4>
+                          <p className="text-salon font-medium">{formatPrice(item.price)}</p>
+                          <div className="flex items-center mt-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            >
+                              -
+                            </Button>
+                            <span className="mx-3">{item.quantity}</span>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-8 w-8 p-0 self-start ml-2"
+                          onClick={() => removeFromCart(item.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between mb-4">
+                      <span className="font-medium">Total:</span>
+                      <span className="font-bold">{formatPrice(getTotalCartPrice())}</span>
+                    </div>
+                    <Button 
+                      className="w-full bg-salon hover:bg-salon-dark"
+                      onClick={() => {
+                        toast({
+                          title: "Order placed!",
+                          description: "Your order has been successfully placed.",
+                        });
+                        setCart([]);
+                        setIsCartOpen(false);
+                      }}
+                    >
+                      Checkout
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {products.map((product) => (
             <Card key={product.id} className="overflow-hidden border border-border/50 h-full flex flex-col">
@@ -122,7 +317,10 @@ const ProductsSection: React.FC = () => {
                 <p className="text-muted-foreground text-sm">{product.description}</p>
               </CardContent>
               <CardFooter>
-                <Button className="w-full bg-salon hover:bg-salon-dark gap-2">
+                <Button 
+                  className="w-full bg-salon hover:bg-salon-dark gap-2"
+                  onClick={() => addToCart(product)}
+                >
                   <ShoppingCart className="h-4 w-4" />
                   Add to Cart
                 </Button>

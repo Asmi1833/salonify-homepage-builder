@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Menu } from 'lucide-react';
+import { X, Menu, MapPin, ShoppingBag, Home, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SalonifyLogo from './SalonifyLogo';
 import { Button } from '@/components/ui/button';
@@ -66,15 +66,27 @@ const SalonNavbar: React.FC = () => {
 
 const NavLinks: React.FC<{ mobile?: boolean }> = ({ mobile }) => {
   const linkClasses = mobile
-    ? "block py-2 hover:text-salon transition-colors"
-    : "hover:text-salon transition-colors";
+    ? "flex items-center gap-2 py-2 hover:text-salon transition-colors"
+    : "flex items-center gap-2 hover:text-salon transition-colors";
 
   return (
     <>
-      <a href="#services" className={linkClasses}>Services</a>
-      <Link to="/products" className={linkClasses}>Products</Link>
-      <a href="#about" className={linkClasses}>About</a>
-      <a href="#contact" className={linkClasses}>Contact</a>
+      <Link to="/" className={linkClasses}>
+        <Home className="h-4 w-4" />
+        <span>Home</span>
+      </Link>
+      <Link to="/products" className={linkClasses}>
+        <ShoppingBag className="h-4 w-4" />
+        <span>Products</span>
+      </Link>
+      <Link to="/locations" className={linkClasses}>
+        <MapPin className="h-4 w-4" />
+        <span>Locations</span>
+      </Link>
+      <Link to="/admin" className={linkClasses}>
+        <User className="h-4 w-4" />
+        <span>Admin</span>
+      </Link>
     </>
   );
 };

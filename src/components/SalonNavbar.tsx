@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import SalonifyLogo from './SalonifyLogo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, X, User } from 'lucide-react';
+import { Menu, X, User, UserCircle } from 'lucide-react';
 
 const SalonNavbar: React.FC = () => {
   const location = useLocation();

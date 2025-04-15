@@ -5,15 +5,21 @@
  * @returns Array of 7 dates, starting from Sunday
  */
 export const getWeekDates = (date: Date): Date[] => {
-  const day = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  const diff = date.getDate() - day; // adjust when day is not Sunday
+  const result: Date[] = [];
+  const day = date.getDay(); // 0 is Sunday, 1 is Monday, etc.
   
-  const weekDates: Date[] = [];
+  // Clone the date to avoid modifying the original
+  const firstDay = new Date(date);
+  
+  // Set to the first day of the week (Sunday)
+  firstDay.setDate(date.getDate() - day);
+  
+  // Create dates for the entire week
   for (let i = 0; i < 7; i++) {
-    const newDate = new Date(date);
-    newDate.setDate(diff + i);
-    weekDates.push(newDate);
+    const currentDate = new Date(firstDay);
+    currentDate.setDate(firstDay.getDate() + i);
+    result.push(currentDate);
   }
   
-  return weekDates;
+  return result;
 };

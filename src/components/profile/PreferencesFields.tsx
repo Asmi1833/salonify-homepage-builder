@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 interface PreferencesFieldsProps {
   form: UseFormReturn<any>;
@@ -53,6 +54,53 @@ const PreferencesFields: React.FC<PreferencesFieldsProps> = ({ form }) => {
           </FormItem>
         )}
       />
+      
+      {/* Email preferences section */}
+      <div className="space-y-4">
+        <h3 className="text-md font-medium">Communication Preferences</h3>
+        
+        <FormField
+          control={form.control}
+          name="emailNotifications"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Email Notifications</FormLabel>
+                <FormDescription>
+                  Receive appointment reminders and special offers via email
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="smsNotifications"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">SMS Notifications</FormLabel>
+                <FormDescription>
+                  Receive appointment reminders via text message
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
     </>
   );
 };

@@ -12,6 +12,8 @@ import Admin from "./pages/Admin";
 import Locations from "./pages/Locations";
 import Recommendations from "./pages/Recommendations";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import StaffPanel from "./pages/StaffPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +33,8 @@ const App = () => (
           <Route path="/locations" element={<Locations />} />
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/staff-panel" element={<StaffPanel />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

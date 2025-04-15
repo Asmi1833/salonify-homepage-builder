@@ -4,17 +4,38 @@ import { Link, useLocation } from 'react-router-dom';
 import SalonifyLogo from './SalonifyLogo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, X, User, UserCircle } from 'lucide-react';
+import { Menu, X, User, UserCircle, Scissors } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 const SalonNavbar: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   // Check if user is logged in
   useEffect(() => {
-    const user = localStorage.getItem('salonifyUser');
-    setIsLoggedIn(!!user);
+    const userData = localStorage.getItem('salonifyUser');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+    }
+    
+    // Check if staff exists
+    const staffData = localStorage.getItem('salonifyStaff');
+    setIsStaff(!!staffData);
   }, []);
 
   const isLinkActive = (path: string) => location.pathname === path;
@@ -29,10 +50,20 @@ const SalonNavbar: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('salonifyUser');
     setIsLoggedIn(false);
-    // Redirect to home page if on dashboard
-    if (location.pathname === '/dashboard') {
+    setUser(null);
+    // Redirect to home page if on dashboard or profile
+    if (location.pathname === '/dashboard' || location.pathname === '/profile') {
       window.location.href = '/';
     }
+  };
+  
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase();
   };
 
   return (
@@ -62,19 +93,42 @@ const SalonNavbar: React.FC = () => {
             <div className="flex items-center space-x-2">
               {isLoggedIn ? (
                 <>
-                  <Link to="/dashboard">
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <User size={16} />
-                      Dashboard
-                    </Button>
-                  </Link>
-                  <Button 
-                    size="sm" 
-                    className="bg-salon hover:bg-salon-dark"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </Button>
+                  {isStaff && (
+                    <Link to="/staff-panel">
+                      <Button variant="outline" size="sm" className="flex items-center gap-1">
+                        <Scissors size={16} />
+                        Staff Panel
+                      </Button>
+                    </Link>
+                  )}
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.profileImage || ''} alt={user?.name || ''} />
+                          <AvatarFallback>{getInitials(user?.name || '')}</AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile" className="cursor-pointer">Profile</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard" className="cursor-pointer">Dashboard</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        className="cursor-pointer text-red-600"
+                        onClick={handleLogout}
+                      >
+                        Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <>
@@ -134,12 +188,40 @@ const SalonNavbar: React.FC = () => {
                 <div className="flex flex-col space-y-3 mt-auto mb-8">
                   {isLoggedIn ? (
                     <>
-                      <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      <div className="flex items-center space-x-2 py-4 mb-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.profileImage || ''} alt={user?.name || ''} />
+                          <AvatarFallback>{getInitials(user?.name || '')}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{user?.name || 'User'}</div>
+                          <div className="text-xs text-muted-foreground">{user?.email || ''}</div>
+                        </div>
+                      </div>
+                      
+                      <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
                         <Button variant="outline" className="w-full flex items-center justify-center gap-1">
                           <User size={16} />
+                          Profile
+                        </Button>
+                      </Link>
+                      
+                      <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                        <Button variant="outline" className="w-full flex items-center justify-center gap-1">
+                          <UserCircle size={16} />
                           Dashboard
                         </Button>
                       </Link>
+                      
+                      {isStaff && (
+                        <Link to="/staff-panel" onClick={() => setIsMenuOpen(false)}>
+                          <Button variant="outline" className="w-full flex items-center justify-center gap-1">
+                            <Scissors size={16} />
+                            Staff Panel
+                          </Button>
+                        </Link>
+                      )}
+                      
                       <Button 
                         className="w-full bg-salon hover:bg-salon-dark"
                         onClick={() => {

@@ -1,13 +1,54 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import SalonNavbar from '@/components/SalonNavbar';
 import Footer from '@/components/Footer';
 import SalonifyLogo from '@/components/SalonifyLogo';
+import { toast } from '@/components/ui/use-toast';
 
 const Login: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Simulate login process
+    setTimeout(() => {
+      // For demo purposes, we'll accept any non-empty values
+      if (email && password) {
+        // Save user to localStorage
+        const user = {
+          email,
+          name: email.split('@')[0], // Simple name from email
+          profileImage: ''
+        };
+        localStorage.setItem('salonifyUser', JSON.stringify(user));
+        
+        // Show success message
+        toast({
+          title: "Login successful",
+          description: "Welcome back to Salonify!",
+        });
+        
+        // Redirect to home page
+        navigate('/');
+      } else {
+        toast({
+          title: "Login failed",
+          description: "Please enter valid credentials",
+          variant: "destructive"
+        });
+      }
+      setLoading(false);
+    }, 1000);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <SalonNavbar />
@@ -21,7 +62,7 @@ const Login: React.FC = () => {
             </p>
           </div>
           
-          <form className="mt-8 space-y-6">
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium mb-1">
@@ -34,6 +75,8 @@ const Login: React.FC = () => {
                   autoComplete="email"
                   required
                   placeholder="Your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               
@@ -53,6 +96,8 @@ const Login: React.FC = () => {
                   autoComplete="current-password"
                   required
                   placeholder="Your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
             </div>
@@ -60,8 +105,9 @@ const Login: React.FC = () => {
             <Button 
               type="submit" 
               className="w-full bg-salon hover:bg-salon-dark text-white"
+              disabled={loading}
             >
-              Sign in
+              {loading ? 'Signing in...' : 'Sign in'}
             </Button>
             
             <div className="text-center text-sm mt-4">

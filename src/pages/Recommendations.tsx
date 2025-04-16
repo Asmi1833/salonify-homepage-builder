@@ -8,13 +8,25 @@ import HairStyleRecommendations from '@/components/HairStyleRecommendations';
 import HairColorRecommendations from '@/components/HairColorRecommendations';
 import NailDesignRecommendations from '@/components/NailDesignRecommendations';
 import { toast } from '@/components/ui/use-toast';
-import { isAuthenticated, requireAuth } from '@/utils/auth';
+import { isAuthenticated, requireAuth, isSessionExpired } from '@/utils/auth';
 
 const Recommendations: React.FC = () => {
   const [activeTab, setActiveTab] = useState('hairstyles');
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check for expired sessions
+    if (isSessionExpired()) {
+      localStorage.removeItem('salonifyUser');
+      navigate('/login', { 
+        state: { 
+          from: '/recommendations',
+          message: "Your session has expired. Please login again to access personalized style recommendations" 
+        }
+      });
+      return;
+    }
+    
     // Check if user is logged in when component mounts
     if (!isAuthenticated()) {
       toast({

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import SalonifyLogo from '@/components/SalonifyLogo';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { loginUser, isSessionExpired } from '@/utils/auth';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -21,6 +22,20 @@ const Login: React.FC = () => {
   const redirectMessage = location.state?.message;
   const redirectFrom = location.state?.from;
 
+  useEffect(() => {
+    // Check if session expired and show message
+    if (isSessionExpired()) {
+      localStorage.removeItem('salonifyUser');
+      if (!redirectMessage) {
+        toast({
+          title: "Session expired",
+          description: "Your session has expired. Please login again.",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [redirectMessage]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -32,33 +47,56 @@ const Login: React.FC = () => {
 
     setTimeout(() => {
       if (isValidEmail && isValidPassword) {
-        // Save user to localStorage
+        // Determine role based on email pattern (for demo purposes)
+        let role = 'user';
+        if (email.includes('admin')) {
+          role = 'admin';
+        } else if (email.includes('staff')) {
+          role = 'staff';
+        }
+        
+        // Create user object
         const user = {
           email,
           name: email.split('@')[0], // Simple name from email
           profileImage: '',
-          role: email.includes('admin') ? 'admin' : 'user' // Simple role-based check
+          role
         };
-        localStorage.setItem('salonifyUser', JSON.stringify(user));
         
-        // Show success message
+        // Login user with expiration
+        loginUser(user);
+        
+        // Show success message with role information
         toast({
           title: "Login successful",
-          description: "Welcome back to Salonify!",
+          description: `Welcome back! You are logged in as ${role}.`,
         });
         
-        // Redirect to previous page or home
-        if (redirectFrom) {
+        // Redirect based on role
+        if (role === 'admin') {
+          navigate('/admin');
+        } else if (role === 'staff') {
+          navigate('/staff-panel');
+        } else if (redirectFrom) {
           navigate(redirectFrom);
         } else {
           navigate('/');
         }
       } else {
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password",
-          variant: "destructive"
-        });
+        // Check if this email exists (for demo, we'll assume it doesn't)
+        if (isValidEmail) {
+          toast({
+            title: "Login failed",
+            description: "Invalid password. Please try again.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Account not found",
+            description: "No account found with this email. Please sign up first.",
+            variant: "destructive"
+          });
+        }
       }
       setLoading(false);
     }, 1000);
@@ -101,6 +139,9 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  For demo: use admin@example.com, staff@example.com, or user@example.com
+                </p>
               </div>
               
               <div>
@@ -122,6 +163,9 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  For demo: use any password with at least 6 characters
+                </p>
               </div>
             </div>
             

@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { isAuthenticated } from "./utils/auth";
+import { isAuthenticated, hasRole, isSessionExpired } from "./utils/auth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -17,29 +17,94 @@ import Profile from "./pages/Profile";
 import StaffPanel from "./pages/StaffPanel";
 import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/ForgotPassword";
+import { useEffect } from "react";
+import { toast } from "@/components/ui/use-toast";
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  // Check for expired session
+  if (isSessionExpired()) {
+    toast({
+      title: "Session expired",
+      description: "Your session has expired. Please login again.",
+      variant: "destructive"
+    });
+    return <Navigate to="/login" replace />;
+  }
+  
   return isAuthenticated() ? children : <Navigate to="/login" replace />;
 };
 
 // Admin route component
 const AdminRoute = ({ children }: { children: JSX.Element }) => {
-  const user = JSON.parse(localStorage.getItem('salonifyUser') || '{}');
-  const isAdmin = user?.role === 'admin';
+  // Check for expired session
+  if (isSessionExpired()) {
+    toast({
+      title: "Session expired",
+      description: "Your session has expired. Please login again.",
+      variant: "destructive"
+    });
+    return <Navigate to="/login" replace />;
+  }
   
-  return isAuthenticated() && isAdmin ? 
-    children : 
-    <Navigate to="/" replace />;
+  const isAdmin = hasRole('admin');
+  
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!isAdmin) {
+    toast({
+      title: "Access denied",
+      description: "You need administrator privileges to access this area.",
+      variant: "destructive"
+    });
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
 };
 
 // Staff route component
 const StaffRoute = ({ children }: { children: JSX.Element }) => {
-  const isStaff = !!localStorage.getItem('salonifyStaff');
+  // Check for expired session
+  if (isSessionExpired()) {
+    toast({
+      title: "Session expired",
+      description: "Your session has expired. Please login again.",
+      variant: "destructive"
+    });
+    return <Navigate to="/login" replace />;
+  }
   
-  return isAuthenticated() && isStaff ? 
-    children : 
-    <Navigate to="/" replace />;
+  const isStaff = hasRole('staff');
+  
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!isStaff) {
+    toast({
+      title: "Access denied",
+      description: "You need staff privileges to access this area.",
+      variant: "destructive"
+    });
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
+
+// Session checker component to check for expired sessions
+const SessionChecker = () => {
+  useEffect(() => {
+    if (isSessionExpired() && isAuthenticated()) {
+      // Clean up expired session
+      localStorage.removeItem('salonifyUser');
+    }
+  }, []);
+  
+  return null;
 };
 
 const queryClient = new QueryClient();
@@ -50,6 +115,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <SessionChecker />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
@@ -64,7 +130,11 @@ const App = () => (
             </AdminRoute>
           } />
           <Route path="/locations" element={<Locations />} />
-          <Route path="/recommendations" element={<Recommendations />} />
+          <Route path="/recommendations" element={
+            <ProtectedRoute>
+              <Recommendations />
+            </ProtectedRoute>
+          } />
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Dashboard />

@@ -9,6 +9,7 @@ import SalonifyLogo from '@/components/SalonifyLogo';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { loginUser } from '@/utils/auth';
 
 const Signup: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -55,11 +56,11 @@ const Signup: React.FC = () => {
         email,
         name: `${firstName} ${lastName}`,
         profileImage: '',
-        role: 'user'
+        role: 'user'  // Default role for new signup is 'user'
       };
       
-      // Store in localStorage
-      localStorage.setItem('salonifyUser', JSON.stringify(user));
+      // Login user with expiration
+      loginUser(user);
       
       // Show success message
       toast({

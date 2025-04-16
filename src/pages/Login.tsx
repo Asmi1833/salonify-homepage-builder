@@ -83,19 +83,29 @@ const Login: React.FC = () => {
           navigate('/');
         }
       } else {
-        // Check if this email exists (for demo, we'll assume it doesn't)
+        // Check if this email exists (for demo, assume not valid credentials)
+        toast({
+          title: "Account not found",
+          description: "No account found with this email or password is incorrect. Please sign up first or try again.",
+          variant: "destructive"
+        });
+        
+        // Suggest signup if email format is valid but login failed
         if (isValidEmail) {
-          toast({
-            title: "Login failed",
-            description: "Invalid password. Please try again.",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Account not found",
-            description: "No account found with this email. Please sign up first.",
-            variant: "destructive"
-          });
+          setTimeout(() => {
+            toast({
+              title: "Create an account",
+              description: "Would you like to create a new account with this email?",
+              action: (
+                <Button 
+                  className="bg-salon hover:bg-salon-dark"
+                  onClick={() => navigate('/signup', { state: { email } })}
+                >
+                  Sign up
+                </Button>
+              )
+            });
+          }, 500);
         }
       }
       setLoading(false);

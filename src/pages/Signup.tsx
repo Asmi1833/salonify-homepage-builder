@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,14 @@ const Signup: React.FC = () => {
   // Check if redirected with a message
   const redirectMessage = location.state?.message;
   const redirectFrom = location.state?.from;
+  const prefillEmail = location.state?.email;
+
+  useEffect(() => {
+    // Prefill email if provided from login page
+    if (prefillEmail) {
+      setEmail(prefillEmail);
+    }
+  }, [prefillEmail]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

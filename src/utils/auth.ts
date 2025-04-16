@@ -107,4 +107,3 @@ export const isSessionExpired = (): boolean => {
 export const logoutUser = (): void => {
   localStorage.removeItem('salonifyUser');
 };
-

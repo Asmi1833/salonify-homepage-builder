@@ -40,7 +40,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 interface Appointment {
@@ -107,6 +107,7 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({ userId }) => {
   const [service, setService] = useState<string>('');
   const [stylist, setStylist] = useState<string>('');
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const navigate = useNavigate();
 
   // Fetch appointments (simulated)
   useEffect(() => {
@@ -161,6 +162,11 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({ userId }) => {
     toast.success('Appointment booked successfully!');
     setIsBookingOpen(false);
     resetForm();
+    
+    // Redirect to dashboard after booking
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 1500);
   };
 
   const handleUpdateAppointment = () => {

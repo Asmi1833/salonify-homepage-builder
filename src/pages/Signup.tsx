@@ -1,13 +1,83 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import SalonNavbar from '@/components/SalonNavbar';
 import Footer from '@/components/Footer';
 import SalonifyLogo from '@/components/SalonifyLogo';
+import { toast } from '@/components/ui/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const Signup: React.FC = () => {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check if redirected with a message
+  const redirectMessage = location.state?.message;
+  const redirectFrom = location.state?.from;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic validation
+    if (password !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please ensure both passwords match",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setLoading(true);
+    
+    // Simulate signup process
+    setTimeout(() => {
+      // Create new user
+      const user = {
+        email,
+        name: `${firstName} ${lastName}`,
+        profileImage: '',
+        role: 'user'
+      };
+      
+      // Store in localStorage
+      localStorage.setItem('salonifyUser', JSON.stringify(user));
+      
+      // Show success message
+      toast({
+        title: "Account created!",
+        description: "Welcome to Salonify - your account has been created successfully.",
+      });
+      
+      // Redirect to previous page or home
+      if (redirectFrom) {
+        navigate(redirectFrom);
+      } else {
+        navigate('/');
+      }
+      
+      setLoading(false);
+    }, 1500);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <SalonNavbar />
@@ -21,7 +91,15 @@ const Signup: React.FC = () => {
             </p>
           </div>
           
-          <form className="mt-8 space-y-6">
+          {redirectMessage && (
+            <Alert variant="destructive" className="my-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Authentication required</AlertTitle>
+              <AlertDescription>{redirectMessage}</AlertDescription>
+            </Alert>
+          )}
+          
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -34,6 +112,8 @@ const Signup: React.FC = () => {
                     type="text"
                     required
                     placeholder="Your first name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                   />
                 </div>
                 <div>
@@ -46,6 +126,8 @@ const Signup: React.FC = () => {
                     type="text"
                     required
                     placeholder="Your last name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
                   />
                 </div>
               </div>
@@ -61,6 +143,8 @@ const Signup: React.FC = () => {
                   autoComplete="email"
                   required
                   placeholder="Your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               
@@ -75,6 +159,8 @@ const Signup: React.FC = () => {
                   autoComplete="new-password"
                   required
                   placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
@@ -88,6 +174,8 @@ const Signup: React.FC = () => {
                   type="password"
                   required
                   placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
             </div>
@@ -95,8 +183,9 @@ const Signup: React.FC = () => {
             <Button 
               type="submit" 
               className="w-full bg-salon hover:bg-salon-dark text-white"
+              disabled={loading}
             >
-              Create account
+              {loading ? 'Creating account...' : 'Create account'}
             </Button>
             
             <div className="text-center text-sm mt-4">

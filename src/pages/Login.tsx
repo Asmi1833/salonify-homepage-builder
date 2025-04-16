@@ -1,32 +1,43 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import SalonNavbar from '@/components/SalonNavbar';
 import Footer from '@/components/Footer';
 import SalonifyLogo from '@/components/SalonifyLogo';
 import { toast } from '@/components/ui/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check if redirected with a message
+  const redirectMessage = location.state?.message;
+  const redirectFrom = location.state?.from;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate login process
+    // Check for valid credentials
+    // For demo purposes, validate against a demo account or check format
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const isValidPassword = password.length >= 6;
+
     setTimeout(() => {
-      // For demo purposes, we'll accept any non-empty values
-      if (email && password) {
+      if (isValidEmail && isValidPassword) {
         // Save user to localStorage
         const user = {
           email,
           name: email.split('@')[0], // Simple name from email
-          profileImage: ''
+          profileImage: '',
+          role: email.includes('admin') ? 'admin' : 'user' // Simple role-based check
         };
         localStorage.setItem('salonifyUser', JSON.stringify(user));
         
@@ -36,12 +47,16 @@ const Login: React.FC = () => {
           description: "Welcome back to Salonify!",
         });
         
-        // Redirect to home page
-        navigate('/');
+        // Redirect to previous page or home
+        if (redirectFrom) {
+          navigate(redirectFrom);
+        } else {
+          navigate('/');
+        }
       } else {
         toast({
           title: "Login failed",
-          description: "Please enter valid credentials",
+          description: "Invalid email or password",
           variant: "destructive"
         });
       }
@@ -61,6 +76,14 @@ const Login: React.FC = () => {
               Sign in to your account to continue
             </p>
           </div>
+          
+          {redirectMessage && (
+            <Alert variant="destructive" className="my-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Authentication required</AlertTitle>
+              <AlertDescription>{redirectMessage}</AlertDescription>
+            </Alert>
+          )}
           
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">

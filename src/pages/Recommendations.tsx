@@ -1,44 +1,77 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SalonNavbar from '@/components/SalonNavbar';
 import Footer from '@/components/Footer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import HairStyleRecommendations from '@/components/HairStyleRecommendations';
-import NailDesignRecommendations from '@/components/NailDesignRecommendations';
 import HairColorRecommendations from '@/components/HairColorRecommendations';
+import NailDesignRecommendations from '@/components/NailDesignRecommendations';
+import { toast } from '@/components/ui/use-toast';
+import { isAuthenticated, requireAuth } from '@/utils/auth';
 
 const Recommendations: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('hairstyles');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is logged in when component mounts
+    if (!isAuthenticated()) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign up or login to access personalized recommendations",
+        variant: "destructive"
+      });
+      navigate('/login', { 
+        state: { 
+          from: '/recommendations',
+          message: "Please login to access personalized style recommendations" 
+        }
+      });
+    }
+  }, [navigate]);
+
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    // Check authentication before allowing tab changes
+    if (requireAuth(navigate, '/recommendations', "Please login to view style recommendations")) {
+      setActiveTab(value);
+    }
+  };
+
+  // If not authenticated, don't render the content
+  if (!isAuthenticated()) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <SalonNavbar />
-      <main className="flex-grow">
-        <div className="salon-section pt-10 md:pt-16">
-          <div className="salon-container">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Smart Style Recommendations</h1>
-            <p className="text-muted-foreground max-w-3xl mb-10">
-              Our AI-powered recommendations help you find the perfect style that complements your features and preferences.
+      <main className="flex-grow py-12">
+        <div className="container px-4 mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold mb-4">Smart Style™ Recommendations</h1>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Our AI-powered recommendation system analyzes your preferences and facial features to suggest perfect styles just for you.
             </p>
-            
-            <Tabs defaultValue="hair-style" className="w-full">
-              <TabsList className="mb-8 flex flex-wrap">
-                <TabsTrigger value="hair-style">Hair Style</TabsTrigger>
-                <TabsTrigger value="hair-color">Hair Color</TabsTrigger>
-                <TabsTrigger value="nail-design">Nail Design</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="hair-style">
-                <HairStyleRecommendations />
-              </TabsContent>
-              
-              <TabsContent value="hair-color">
-                <HairColorRecommendations />
-              </TabsContent>
-              
-              <TabsContent value="nail-design">
-                <NailDesignRecommendations />
-              </TabsContent>
-            </Tabs>
           </div>
+          
+          <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full max-w-4xl mx-auto">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
+              <TabsTrigger value="hairstyles">Hair Styles</TabsTrigger>
+              <TabsTrigger value="haircolors">Hair Colors</TabsTrigger>
+              <TabsTrigger value="nails">Nail Designs</TabsTrigger>
+            </TabsList>
+            <TabsContent value="hairstyles">
+              <HairStyleRecommendations />
+            </TabsContent>
+            <TabsContent value="haircolors">
+              <HairColorRecommendations />
+            </TabsContent>
+            <TabsContent value="nails">
+              <NailDesignRecommendations />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
       <Footer />

@@ -126,7 +126,7 @@ export const logoutUser = (): void => {
  * This simulates a check against a database
  */
 export const userExists = (email: string): boolean => {
-  // For demo purposes, we're just checking if the email includes specific keywords
+  // For demo purposes, we're checking if the email includes specific keywords
   // In a real app, this would check against your backend database
   return email.includes('admin') || 
          email.includes('staff') || 
@@ -134,4 +134,4 @@ export const userExists = (email: string): boolean => {
          email.includes('user') ||
          email.includes('client') ||
          email.includes('test');
-}
+};

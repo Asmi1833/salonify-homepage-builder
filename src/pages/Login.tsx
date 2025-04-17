@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -9,7 +8,7 @@ import SalonifyLogo from '@/components/SalonifyLogo';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { loginUser, isSessionExpired, UserRole } from '@/utils/auth';
+import { loginUser, isSessionExpired, UserRole, userExists } from '@/utils/auth';
 import { 
   Select,
   SelectContent,
@@ -27,12 +26,10 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Check if redirected with a message
   const redirectMessage = location.state?.message;
   const redirectFrom = location.state?.from;
 
   useEffect(() => {
-    // Check if session expired and show message
     if (isSessionExpired()) {
       localStorage.removeItem('salonifyUser');
       if (!redirectMessage) {
@@ -49,70 +46,62 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Check for valid credentials
-    // For demo purposes, validate against a demo account or check format
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isValidPassword = password.length >= 6;
 
     setTimeout(() => {
       if (isValidEmail && isValidPassword) {
-        let role: UserRole = 'client';
+        const userAccountExists = demoMode || userExists(email);
         
-        if (demoMode) {
-          // In demo mode, use the selected role
-          role = demoRole;
-        } else {
-          // Determine role based on email pattern (for demo purposes)
-          if (email.includes('admin')) {
-            role = 'admin';
-          } else if (email.includes('staff')) {
-            role = 'staff';
-          } else if (email.includes('manager')) {
-            role = 'manager';
+        if (userAccountExists) {
+          let role: UserRole = 'client';
+          
+          if (demoMode) {
+            role = demoRole;
+          } else {
+            if (email.includes('admin')) {
+              role = 'admin';
+            } else if (email.includes('staff')) {
+              role = 'staff';
+            } else if (email.includes('manager')) {
+              role = 'manager';
+            }
           }
-        }
-        
-        // Create user object
-        const user = {
-          id: `user-${Date.now()}`,
-          email,
-          name: email.split('@')[0].replace(/[.]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Simple name from email
-          profileImage: '',
-          role,
-          createdAt: new Date().toISOString()
-        };
-        
-        // Login user with expiration
-        loginUser(user);
-        
-        // Show success message with role information
-        toast({
-          title: "Login successful",
-          description: `Welcome back! You are logged in as ${role}.`,
-        });
-        
-        // Redirect based on role
-        if (role === 'admin') {
-          navigate('/admin');
-        } else if (role === 'staff') {
-          navigate('/staff-panel');
-        } else if (role === 'manager') {
-          navigate('/manager');
-        } else if (redirectFrom) {
-          navigate(redirectFrom);
+          
+          const user = {
+            id: `user-${Date.now()}`,
+            email,
+            name: email.split('@')[0].replace(/[.]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            profileImage: '',
+            role,
+            createdAt: new Date().toISOString()
+          };
+          
+          loginUser(user);
+          
+          toast({
+            title: "Login successful",
+            description: `Welcome back! You are logged in as ${role}.`,
+          });
+          
+          if (role === 'admin') {
+            navigate('/admin');
+          } else if (role === 'staff') {
+            navigate('/staff-panel');
+          } else if (role === 'manager') {
+            navigate('/manager');
+          } else if (redirectFrom) {
+            navigate(redirectFrom);
+          } else {
+            navigate('/');
+          }
         } else {
-          navigate('/');
-        }
-      } else {
-        // Check if this email exists (for demo, assume not valid credentials)
-        toast({
-          title: "Account not found",
-          description: "No account found with this email or password is incorrect. Please sign up first or try again.",
-          variant: "destructive"
-        });
-        
-        // Suggest signup if email format is valid but login failed
-        if (isValidEmail) {
+          toast({
+            title: "Account not found",
+            description: "No account exists with this email address. Please sign up first.",
+            variant: "destructive"
+          });
+          
           setTimeout(() => {
             toast({
               title: "Create an account",
@@ -124,9 +113,24 @@ const Login: React.FC = () => {
                 >
                   Sign up
                 </Button>
-              )
+              ),
+              duration: 10000,
             });
-          }, 500);
+          }, 1000);
+        }
+      } else {
+        if (!isValidEmail) {
+          toast({
+            title: "Invalid email",
+            description: "Please enter a valid email address",
+            variant: "destructive"
+          });
+        } else if (!isValidPassword) {
+          toast({
+            title: "Invalid password",
+            description: "Password must be at least 6 characters long",
+            variant: "destructive"
+          });
         }
       }
       setLoading(false);

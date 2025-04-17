@@ -121,3 +121,17 @@ export const logoutUser = (): void => {
   localStorage.removeItem('salonifyUser');
 };
 
+/**
+ * Check if a user with the given email exists (for demo purposes)
+ * This simulates a check against a database
+ */
+export const userExists = (email: string): boolean => {
+  // For demo purposes, we're just checking if the email includes specific keywords
+  // In a real app, this would check against your backend database
+  return email.includes('admin') || 
+         email.includes('staff') || 
+         email.includes('manager') || 
+         email.includes('user') ||
+         email.includes('client') ||
+         email.includes('test');
+}

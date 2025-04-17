@@ -38,7 +38,7 @@ const SalonNavbar: React.FC = () => {
   const navLinks = [
     { path: '/', label: 'Home' },
     { path: '/products', label: 'Products' },
-    { path: '/locations', label: 'Locations' },
+    { path: '/locations', label: 'Locations' }, // Add this line
     { path: '/recommendations', label: 'Smart Style' },
   ];
 

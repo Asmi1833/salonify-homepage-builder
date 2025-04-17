@@ -7,11 +7,23 @@ const HeroSection: React.FC = () => {
   const navigate = useNavigate();
 
   const handleBookAppointment = () => {
-    document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' });
+    const bookingElement = document.getElementById('booking');
+    if (bookingElement) {
+      bookingElement.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      // If not on homepage, redirect to locations page
+      navigate('/locations');
+    }
   };
 
   const handleViewServices = () => {
-    document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' });
+    const servicesElement = document.getElementById('services');
+    if (servicesElement) {
+      servicesElement.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      // If not on homepage, redirect to locations page with services query
+      navigate('/#services');
+    }
   };
 
   return (

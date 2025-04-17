@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { isAuthenticated, hasRole, isSessionExpired } from "./utils/auth";
+import { isAuthenticated, hasRole, isSessionExpired, UserRole } from "./utils/auth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -16,6 +16,7 @@ import Recommendations from "./pages/Recommendations";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import StaffPanel from "./pages/StaffPanel";
+import ManagerPanel from "./pages/ManagerPanel";
 import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/ForgotPassword";
 import { useEffect } from "react";
@@ -36,8 +37,8 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return isAuthenticated() ? children : <Navigate to="/login" replace />;
 };
 
-// Admin route component
-const AdminRoute = ({ children }: { children: JSX.Element }) => {
+// Role-based route component
+const RoleRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles: UserRole[] }) => {
   // Check for expired session
   if (isSessionExpired()) {
     toast({
@@ -48,16 +49,16 @@ const AdminRoute = ({ children }: { children: JSX.Element }) => {
     return <Navigate to="/login" replace />;
   }
   
-  const isAdmin = hasRole('admin');
-  
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
   
-  if (!isAdmin) {
+  const hasAllowedRole = hasRole(allowedRoles);
+  
+  if (!hasAllowedRole) {
     toast({
       title: "Access denied",
-      description: "You need administrator privileges to access this area.",
+      description: `You need ${allowedRoles.join(' or ')} privileges to access this area.`,
       variant: "destructive"
     });
     return <Navigate to="/" replace />;
@@ -66,34 +67,31 @@ const AdminRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+// Admin route component
+const AdminRoute = ({ children }: { children: JSX.Element }) => {
+  return (
+    <RoleRoute allowedRoles={['admin']}>
+      {children}
+    </RoleRoute>
+  );
+};
+
 // Staff route component
 const StaffRoute = ({ children }: { children: JSX.Element }) => {
-  // Check for expired session
-  if (isSessionExpired()) {
-    toast({
-      title: "Session expired",
-      description: "Your session has expired. Please login again.",
-      variant: "destructive"
-    });
-    return <Navigate to="/login" replace />;
-  }
-  
-  const isStaff = hasRole('staff');
-  
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (!isStaff) {
-    toast({
-      title: "Access denied",
-      description: "You need staff privileges to access this area.",
-      variant: "destructive"
-    });
-    return <Navigate to="/" replace />;
-  }
-  
-  return children;
+  return (
+    <RoleRoute allowedRoles={['staff']}>
+      {children}
+    </RoleRoute>
+  );
+};
+
+// Manager route component
+const ManagerRoute = ({ children }: { children: JSX.Element }) => {
+  return (
+    <RoleRoute allowedRoles={['manager']}>
+      {children}
+    </RoleRoute>
+  );
 };
 
 // Session checker component to check for expired sessions
@@ -131,6 +129,11 @@ const App = () => (
             <AdminRoute>
               <Admin />
             </AdminRoute>
+          } />
+          <Route path="/manager" element={
+            <ManagerRoute>
+              <ManagerPanel />
+            </ManagerRoute>
           } />
           <Route path="/recommendations" element={
             <ProtectedRoute>

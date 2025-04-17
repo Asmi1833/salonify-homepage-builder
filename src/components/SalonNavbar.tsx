@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import SalonifyLogo from './SalonifyLogo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, X, User, UserCircle, Scissors } from 'lucide-react';
+import { Menu, X, User, UserCircle, Scissors, Settings, LayoutDashboard } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -14,28 +14,23 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { getCurrentUser, logoutUser, UserRole } from '@/utils/auth';
 
 const SalonNavbar: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isStaff, setIsStaff] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   // Check if user is logged in
   useEffect(() => {
-    const userData = localStorage.getItem('salonifyUser');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
+    const userInfo = getCurrentUser();
+    if (userInfo) {
+      setUser(userInfo);
       setIsLoggedIn(true);
     } else {
       setIsLoggedIn(false);
     }
-    
-    // Check if staff exists
-    const staffData = localStorage.getItem('salonifyStaff');
-    setIsStaff(!!staffData);
   }, []);
 
   const isLinkActive = (path: string) => location.pathname === path;
@@ -48,11 +43,15 @@ const SalonNavbar: React.FC = () => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('salonifyUser');
+    logoutUser();
     setIsLoggedIn(false);
     setUser(null);
-    // Redirect to home page if on dashboard or profile
-    if (location.pathname === '/dashboard' || location.pathname === '/profile') {
+    // Redirect to home page if on protected route
+    if (location.pathname.includes('/admin') || 
+        location.pathname.includes('/dashboard') || 
+        location.pathname.includes('/profile') || 
+        location.pathname.includes('/staff-panel') ||
+        location.pathname.includes('/manager')) {
       window.location.href = '/';
     }
   };
@@ -64,6 +63,45 @@ const SalonNavbar: React.FC = () => {
       .map(n => n[0])
       .join('')
       .toUpperCase();
+  };
+
+  const getDashboardLink = (role: UserRole) => {
+    switch (role) {
+      case 'admin':
+        return '/admin';
+      case 'staff':
+        return '/staff-panel';
+      case 'manager':
+        return '/manager';
+      default:
+        return '/dashboard';
+    }
+  };
+
+  const getDashboardLabel = (role: UserRole) => {
+    switch (role) {
+      case 'admin':
+        return 'Admin Panel';
+      case 'staff':
+        return 'Staff Panel';
+      case 'manager':
+        return 'Manager Panel';
+      default:
+        return 'Dashboard';
+    }
+  };
+
+  const getDashboardIcon = (role: UserRole) => {
+    switch (role) {
+      case 'admin':
+        return <Settings size={16} />;
+      case 'staff':
+        return <Scissors size={16} />;
+      case 'manager':
+        return <LayoutDashboard size={16} />;
+      default:
+        return <UserCircle size={16} />;
+    }
   };
 
   return (
@@ -93,14 +131,12 @@ const SalonNavbar: React.FC = () => {
             <div className="flex items-center space-x-2">
               {isLoggedIn ? (
                 <>
-                  {isStaff && (
-                    <Link to="/staff-panel">
-                      <Button variant="outline" size="sm" className="flex items-center gap-1">
-                        <Scissors size={16} />
-                        Staff Panel
-                      </Button>
-                    </Link>
-                  )}
+                  <Link to={getDashboardLink(user?.role || 'client')}>
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      {getDashboardIcon(user?.role || 'client')}
+                      {getDashboardLabel(user?.role || 'client')}
+                    </Button>
+                  </Link>
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -113,6 +149,9 @@ const SalonNavbar: React.FC = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
+                        {user?.role && `Logged in as ${user.role}`}
+                      </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link to="/profile" className="cursor-pointer">Profile</Link>
@@ -195,7 +234,7 @@ const SalonNavbar: React.FC = () => {
                         </Avatar>
                         <div>
                           <div className="font-medium">{user?.name || 'User'}</div>
-                          <div className="text-xs text-muted-foreground">{user?.email || ''}</div>
+                          <div className="text-xs text-muted-foreground">{user?.role || 'client'}</div>
                         </div>
                       </div>
                       
@@ -206,21 +245,12 @@ const SalonNavbar: React.FC = () => {
                         </Button>
                       </Link>
                       
-                      <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      <Link to={getDashboardLink(user?.role || 'client')} onClick={() => setIsMenuOpen(false)}>
                         <Button variant="outline" className="w-full flex items-center justify-center gap-1">
-                          <UserCircle size={16} />
-                          Dashboard
+                          {getDashboardIcon(user?.role || 'client')}
+                          {getDashboardLabel(user?.role || 'client')}
                         </Button>
                       </Link>
-                      
-                      {isStaff && (
-                        <Link to="/staff-panel" onClick={() => setIsMenuOpen(false)}>
-                          <Button variant="outline" className="w-full flex items-center justify-center gap-1">
-                            <Scissors size={16} />
-                            Staff Panel
-                          </Button>
-                        </Link>
-                      )}
                       
                       <Button 
                         className="w-full bg-salon hover:bg-salon-dark"

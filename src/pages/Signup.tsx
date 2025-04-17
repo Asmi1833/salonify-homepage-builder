@@ -9,7 +9,14 @@ import SalonifyLogo from '@/components/SalonifyLogo';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { loginUser } from '@/utils/auth';
+import { loginUser, UserRole } from '@/utils/auth';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Signup: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -17,6 +24,7 @@ const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('client');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,10 +69,12 @@ const Signup: React.FC = () => {
     setTimeout(() => {
       // Create new user
       const user = {
+        id: `user-${Date.now()}`,
         email,
         name: `${firstName} ${lastName}`,
         profileImage: '',
-        role: 'user'  // Default role for new signup is 'user'
+        role,
+        createdAt: new Date().toISOString()
       };
       
       // Login user with expiration
@@ -73,11 +83,17 @@ const Signup: React.FC = () => {
       // Show success message
       toast({
         title: "Account created!",
-        description: "Welcome to Salonify - your account has been created successfully.",
+        description: `Welcome to Salonify - your ${role} account has been created successfully.`,
       });
       
-      // Redirect to previous page or home
-      if (redirectFrom) {
+      // Redirect to appropriate page based on role
+      if (role === 'admin') {
+        navigate('/admin');
+      } else if (role === 'staff') {
+        navigate('/staff-panel');
+      } else if (role === 'manager') {
+        navigate('/manager');
+      } else if (redirectFrom) {
         navigate(redirectFrom);
       } else {
         navigate('/');
@@ -186,6 +202,29 @@ const Signup: React.FC = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
+              </div>
+              
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium mb-1">
+                  Account type
+                </label>
+                <Select 
+                  value={role} 
+                  onValueChange={(value: UserRole) => setRole(value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select account type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="client">Client</SelectItem>
+                    <SelectItem value="staff">Staff/Beautician</SelectItem>
+                    <SelectItem value="manager">Salon Manager</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select the type of account you want to create
+                </p>
               </div>
             </div>
             

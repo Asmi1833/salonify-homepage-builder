@@ -9,12 +9,21 @@ import SalonifyLogo from '@/components/SalonifyLogo';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { loginUser, isSessionExpired } from '@/utils/auth';
+import { loginUser, isSessionExpired, UserRole } from '@/utils/auth';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState(true);
+  const [demoRole, setDemoRole] = useState<UserRole>('client');
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -47,20 +56,30 @@ const Login: React.FC = () => {
 
     setTimeout(() => {
       if (isValidEmail && isValidPassword) {
-        // Determine role based on email pattern (for demo purposes)
-        let role = 'user';
-        if (email.includes('admin')) {
-          role = 'admin';
-        } else if (email.includes('staff')) {
-          role = 'staff';
+        let role: UserRole = 'client';
+        
+        if (demoMode) {
+          // In demo mode, use the selected role
+          role = demoRole;
+        } else {
+          // Determine role based on email pattern (for demo purposes)
+          if (email.includes('admin')) {
+            role = 'admin';
+          } else if (email.includes('staff')) {
+            role = 'staff';
+          } else if (email.includes('manager')) {
+            role = 'manager';
+          }
         }
         
         // Create user object
         const user = {
+          id: `user-${Date.now()}`,
           email,
-          name: email.split('@')[0], // Simple name from email
+          name: email.split('@')[0].replace(/[.]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Simple name from email
           profileImage: '',
-          role
+          role,
+          createdAt: new Date().toISOString()
         };
         
         // Login user with expiration
@@ -77,6 +96,8 @@ const Login: React.FC = () => {
           navigate('/admin');
         } else if (role === 'staff') {
           navigate('/staff-panel');
+        } else if (role === 'manager') {
+          navigate('/manager');
         } else if (redirectFrom) {
           navigate(redirectFrom);
         } else {
@@ -133,6 +154,36 @@ const Login: React.FC = () => {
             </Alert>
           )}
           
+          {demoMode && (
+            <div className="bg-slate-50 p-4 rounded-md">
+              <p className="text-sm font-medium mb-2">Demo Mode</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Select your role to login with demo credentials:
+              </p>
+              <Select 
+                value={demoRole} 
+                onValueChange={(value: UserRole) => setDemoRole(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Client</SelectItem>
+                  <SelectItem value="staff">Staff/Beautician</SelectItem>
+                  <SelectItem value="manager">Salon Manager</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="link"
+                className="text-xs p-0 h-auto mt-2"
+                onClick={() => setDemoMode(false)}
+              >
+                Switch to regular login
+              </Button>
+            </div>
+          )}
+          
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
@@ -149,9 +200,11 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  For demo: use admin@example.com, staff@example.com, or user@example.com
-                </p>
+                {!demoMode && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For demo: use admin@example.com, staff@example.com, manager@example.com, or user@example.com
+                  </p>
+                )}
               </div>
               
               <div>
@@ -173,9 +226,11 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  For demo: use any password with at least 6 characters
-                </p>
+                {!demoMode && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For demo: use any password with at least 6 characters
+                  </p>
+                )}
               </div>
             </div>
             
@@ -193,6 +248,17 @@ const Login: React.FC = () => {
                 Sign up
               </Link>
             </div>
+            
+            {!demoMode && (
+              <Button
+                variant="ghost"
+                className="w-full text-sm"
+                onClick={() => setDemoMode(true)}
+                type="button"
+              >
+                Switch to Demo Mode
+              </Button>
+            )}
           </form>
         </div>
       </main>

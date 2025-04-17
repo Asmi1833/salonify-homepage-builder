@@ -3,11 +3,17 @@
  * Authentication utility functions
  */
 
+export type UserRole = 'admin' | 'manager' | 'client' | 'staff';
+
 export interface User {
+  id?: string;
   email: string;
   name: string;
   profileImage: string;
-  role?: string;
+  role: UserRole;
+  phoneNumber?: string;
+  createdAt?: string;
+  lastLogin?: string;
 }
 
 /**
@@ -39,9 +45,15 @@ export const getCurrentUser = (): User | null => {
 /**
  * Check if user has specific role
  */
-export const hasRole = (role: string): boolean => {
+export const hasRole = (role: UserRole | UserRole[]): boolean => {
   const user = getCurrentUser();
-  return user?.role === role;
+  if (!user) return false;
+  
+  if (Array.isArray(role)) {
+    return role.includes(user.role);
+  }
+  
+  return user.role === role;
 };
 
 /**
@@ -70,6 +82,7 @@ export const loginUser = (userData: User): void => {
   
   const userDataWithExpiration = {
     ...userData,
+    lastLogin: new Date().toISOString(),
     expiration: expirationDate.getTime()
   };
   
@@ -107,3 +120,4 @@ export const isSessionExpired = (): boolean => {
 export const logoutUser = (): void => {
   localStorage.removeItem('salonifyUser');
 };
+

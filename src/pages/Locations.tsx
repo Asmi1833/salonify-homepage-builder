@@ -83,7 +83,7 @@ const SALON_LOCATIONS = [
 
 const Locations: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedArea, setSelectedArea] = useState('');
+  const [selectedArea, setSelectedArea] = useState('all'); // Changed from empty string to 'all'
   const navigate = useNavigate();
   
   const areas = [...new Set(SALON_LOCATIONS.map(salon => salon.area))];
@@ -94,7 +94,7 @@ const Locations: React.FC = () => {
       location.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       location.city.toLowerCase().includes(searchQuery.toLowerCase());
       
-    const matchesArea = selectedArea === '' || location.area === selectedArea;
+    const matchesArea = selectedArea === 'all' || location.area === selectedArea; // Changed from empty string to 'all'
     
     return matchesSearch && matchesArea;
   });
@@ -145,7 +145,7 @@ const Locations: React.FC = () => {
                     <SelectValue placeholder="Filter by area" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Areas</SelectItem>
+                    <SelectItem value="all">All Areas</SelectItem> {/* Changed from empty string to 'all' */}
                     {areas.map(area => (
                       <SelectItem key={area} value={area}>{area}</SelectItem>
                     ))}

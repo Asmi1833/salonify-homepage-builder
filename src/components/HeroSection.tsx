@@ -1,8 +1,19 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const HeroSection: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleBookAppointment = () => {
+    document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleViewServices = () => {
+    document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <section className="salon-section pt-10 md:pt-16 lg:pt-20">
       <div className="salon-container">
@@ -15,10 +26,17 @@ const HeroSection: React.FC = () => {
               Experience luxury hair care and treatments designed to enhance your natural beauty at Salonify.
             </p>
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-              <Button className="bg-salon hover:bg-salon-dark text-white px-8 py-6 text-lg">
+              <Button 
+                className="bg-salon hover:bg-salon-dark text-white px-8 py-6 text-lg"
+                onClick={handleBookAppointment}
+              >
                 Book Appointment
               </Button>
-              <Button variant="outline" className="border-salon text-salon hover:bg-salon/10 px-8 py-6 text-lg">
+              <Button 
+                variant="outline" 
+                className="border-salon text-salon hover:bg-salon/10 px-8 py-6 text-lg"
+                onClick={handleViewServices}
+              >
                 View Services
               </Button>
             </div>

@@ -11,6 +11,7 @@ import Signup from "./pages/Signup";
 import Products from "./pages/Products";
 import Admin from "./pages/Admin";
 import Locations from "./pages/Locations";
+import LocationBooking from "./pages/LocationBooking";
 import Recommendations from "./pages/Recommendations";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
@@ -122,6 +123,8 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/locations" element={<Locations />} />
+          <Route path="/locations/book/:locationId" element={<LocationBooking />} />
           
           {/* Protected Routes */}
           <Route path="/admin" element={
@@ -129,7 +132,6 @@ const App = () => (
               <Admin />
             </AdminRoute>
           } />
-          <Route path="/locations" element={<Locations />} />
           <Route path="/recommendations" element={
             <ProtectedRoute>
               <Recommendations />

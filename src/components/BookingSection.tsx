@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { isAuthenticated } from '@/utils/auth';
 
 const BookingSection: React.FC = () => {
   const [name, setName] = useState('');
@@ -20,59 +20,31 @@ const BookingSection: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    if (!isAuthenticated()) {
+      toast.error("Please login to book an appointment");
+      navigate('/login', { 
+        state: { 
+          from: '/#booking',
+          message: "Please login to book an appointment" 
+        }
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     if (!name || !email || !phone || !service || !date) {
       toast.error("Please fill in all fields");
       setIsSubmitting(false);
       return;
     }
 
-    // Simulate booking process
-    setTimeout(() => {
-      // Get the logged in user
-      const userJson = localStorage.getItem('salonifyUser');
-      const userId = userJson ? JSON.parse(userJson).email : 'guest';
-
-      // Save appointment
-      const appointments = JSON.parse(localStorage.getItem(`appointments-${userId}`) || '[]');
-      const newAppointment = {
-        id: `appt-${Date.now()}`,
-        date: new Date(date),
-        time: '10:00 AM', // Default time
-        service,
-        stylist: 'Emma Johnson', // Default stylist
-        status: 'upcoming'
-      };
-      
-      localStorage.setItem(`appointments-${userId}`, JSON.stringify([...appointments, newAppointment]));
-      
-      // Create notification
-      const notifications = JSON.parse(localStorage.getItem(`notifications-${userId}`) || '[]');
-      const newNotification = {
-        id: `notif-${Date.now()}`,
-        title: 'New Appointment Booked',
-        message: `Your ${service} appointment has been scheduled for ${new Date(date).toLocaleDateString()}`,
-        date: new Date(),
-        read: false
-      };
-      
-      localStorage.setItem(`notifications-${userId}`, JSON.stringify([...notifications, newNotification]));
-
-      toast.success("Appointment booked successfully!");
-      
-      // Redirect after booking
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
-      
-      setIsSubmitting(false);
-      
-      // Reset form
-      setName('');
-      setEmail('');
-      setPhone('');
-      setService('');
-      setDate('');
-    }, 1000);
+    navigate('/locations');
+    
+    toast.success("Please select a location for your appointment", {
+      duration: 5000,
+    });
+    
+    setIsSubmitting(false);
   };
 
   return (

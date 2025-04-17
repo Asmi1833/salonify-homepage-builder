@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SalonNavbar from '@/components/SalonNavbar';
 import Footer from '@/components/Footer';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MapPin, Phone, Clock, CalendarRange, Search } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+import { isAuthenticated } from '@/utils/auth';
+import { toast } from 'sonner';
 
 // Sample salon location data
 const SALON_LOCATIONS = [
@@ -82,6 +84,7 @@ const SALON_LOCATIONS = [
 const Locations: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
+  const navigate = useNavigate();
   
   const areas = [...new Set(SALON_LOCATIONS.map(salon => salon.area))];
   
@@ -95,6 +98,23 @@ const Locations: React.FC = () => {
     
     return matchesSearch && matchesArea;
   });
+
+  const handleBookAtLocation = (locationId: number) => {
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
+      toast.error("Please login to book an appointment");
+      navigate('/login', { 
+        state: { 
+          from: `/locations/book/${locationId}`,
+          message: "Please login to book an appointment" 
+        }
+      });
+      return;
+    }
+    
+    // Navigate to booking page for this location
+    navigate(`/locations/book/${locationId}`);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -125,7 +145,7 @@ const Locations: React.FC = () => {
                     <SelectValue placeholder="Filter by area" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Areas</SelectItem>
+                    <SelectItem value="">All Areas</SelectItem>
                     {areas.map(area => (
                       <SelectItem key={area} value={area}>{area}</SelectItem>
                     ))}
@@ -173,7 +193,10 @@ const Locations: React.FC = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full bg-salon hover:bg-salon-dark">
+                    <Button 
+                      className="w-full bg-salon hover:bg-salon-dark"
+                      onClick={() => handleBookAtLocation(location.id)}
+                    >
                       <CalendarRange className="h-4 w-4 mr-2" />
                       Book at this location
                     </Button>

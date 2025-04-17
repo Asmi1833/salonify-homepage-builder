@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast as sonnerToast } from 'sonner';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -79,9 +81,9 @@ const Login: React.FC = () => {
           
           loginUser(user);
           
-          toast({
-            title: "Login successful",
+          sonnerToast.success("Login successful", {
             description: `Welcome back! You are logged in as ${role}.`,
+            duration: 3000
           });
           
           if (role === 'admin') {
@@ -96,40 +98,33 @@ const Login: React.FC = () => {
             navigate('/');
           }
         } else {
-          toast({
-            title: "Account not found",
-            description: "No account exists with this email address. Please sign up first.",
-            variant: "destructive"
+          sonnerToast.error("Account not found", {
+            description: "No account exists with this email. Please sign up first.",
+            duration: 5000
           });
           
+          // Show a prompt to redirect to sign up page
           setTimeout(() => {
-            toast({
-              title: "Create an account",
+            sonnerToast.warning("Create an account", {
               description: "Would you like to create a new account with this email?",
-              action: (
-                <Button 
-                  className="bg-salon hover:bg-salon-dark"
-                  onClick={() => navigate('/signup', { state: { email } })}
-                >
-                  Sign up
-                </Button>
-              ),
+              action: {
+                label: "Sign up",
+                onClick: () => navigate('/signup', { state: { email } })
+              },
               duration: 10000,
             });
           }, 1000);
         }
       } else {
         if (!isValidEmail) {
-          toast({
-            title: "Invalid email",
+          sonnerToast.error("Invalid email", {
             description: "Please enter a valid email address",
-            variant: "destructive"
+            duration: 3000
           });
         } else if (!isValidPassword) {
-          toast({
-            title: "Invalid password",
+          sonnerToast.error("Invalid password", {
             description: "Password must be at least 6 characters long",
-            variant: "destructive"
+            duration: 3000
           });
         }
       }

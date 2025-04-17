@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast as sonnerToast } from 'sonner';
 
 const Signup: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -38,6 +39,10 @@ const Signup: React.FC = () => {
     // Prefill email if provided from login page
     if (prefillEmail) {
       setEmail(prefillEmail);
+      sonnerToast.info("Email prefilled", {
+        description: "We've prefilled your email from the login page.",
+        duration: 3000
+      });
     }
   }, [prefillEmail]);
 
@@ -46,19 +51,17 @@ const Signup: React.FC = () => {
     
     // Basic validation
     if (password !== confirmPassword) {
-      toast({
-        title: "Passwords don't match",
+      sonnerToast.error("Passwords don't match", {
         description: "Please ensure both passwords match",
-        variant: "destructive"
+        duration: 3000
       });
       return;
     }
     
     if (password.length < 6) {
-      toast({
-        title: "Password too short",
+      sonnerToast.error("Password too short", {
         description: "Password must be at least 6 characters long",
-        variant: "destructive"
+        duration: 3000
       });
       return;
     }
@@ -81,9 +84,9 @@ const Signup: React.FC = () => {
       loginUser(user);
       
       // Show success message
-      toast({
-        title: "Account created!",
+      sonnerToast.success("Account created!", {
         description: `Welcome to Salonify - your ${role} account has been created successfully.`,
+        duration: 3000
       });
       
       // Redirect to appropriate page based on role

@@ -81,8 +81,14 @@ const App = () => {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/products" element={<Products />} />
             <Route path="/locations" element={<Locations />} />
-            
-            {/* Protected Routes */}
+            <Route 
+              path="/locations/book/:locationId" 
+              element={
+                <ProtectedRoute>
+                  <LocationBooking />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/dashboard" 
               element={
@@ -131,8 +137,6 @@ const App = () => {
                 </ProtectedRoute>
               } 
             />
-            
-            {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

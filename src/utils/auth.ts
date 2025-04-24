@@ -1,155 +1,65 @@
 
-/**
- * Authentication utility functions
- */
+import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'admin' | 'manager' | 'client' | 'staff';
 
 export interface User {
-  id?: string;
+  id: string;
   email: string;
   name: string;
-  profileImage: string;
   role: UserRole;
-  phoneNumber?: string;
-  createdAt?: string;
-  lastLogin?: string;
+  profileImage?: string;
 }
 
 /**
- * Check if user is logged in
+ * Check if user is authenticated with Supabase
  */
-export const isAuthenticated = (): boolean => {
-  const userData = localStorage.getItem('salonifyUser');
-  return !!userData;
+export const isAuthenticated = async (): Promise<boolean> => {
+  const { data } = await supabase.auth.getSession();
+  return !!data.session?.user;
 };
 
 /**
- * Get current user data
+ * Get current user data from Supabase
  */
-export const getCurrentUser = (): User | null => {
-  const userData = localStorage.getItem('salonifyUser');
+export const getCurrentUser = async (): Promise<User | null> => {
+  const { data } = await supabase.auth.getSession();
+  const user = data.session?.user;
   
-  if (!userData) {
-    return null;
-  }
-  
-  try {
-    return JSON.parse(userData) as User;
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    return null;
-  }
+  if (!user) return null;
+
+  // Fetch additional user profile data
+  const { data: profileData, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !profileData) return null;
+
+  return {
+    id: user.id,
+    email: user.email || '',
+    name: profileData.name,
+    role: profileData.role,
+    profileImage: profileData.profile_image || ''
+  };
 };
 
 /**
  * Check if user has specific role
  */
-export const hasRole = (role: UserRole | UserRole[]): boolean => {
-  const user = getCurrentUser();
+export const hasRole = async (allowedRoles: UserRole | UserRole[]): Promise<boolean> => {
+  const user = await getCurrentUser();
   if (!user) return false;
   
-  if (Array.isArray(role)) {
-    return role.includes(user.role);
-  }
-  
-  return user.role === role;
+  const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  return roles.includes(user.role);
 };
 
 /**
- * Redirect to login with message if not authenticated
+ * Logout user
  */
-export const requireAuth = (navigate: any, from: string, message: string = "Please login to access this feature"): boolean => {
-  if (!isAuthenticated()) {
-    navigate('/login', { 
-      state: { 
-        from,
-        message 
-      }
-    });
-    return false;
-  }
-  return true;
-};
-
-/**
- * Login user and store data in localStorage with expiration
- */
-export const loginUser = (userData: User): void => {
-  // Set expiration to 30 days from now
-  const expirationDate = new Date();
-  expirationDate.setDate(expirationDate.getDate() + 30);
-  
-  const userDataWithExpiration = {
-    ...userData,
-    lastLogin: new Date().toISOString(),
-    expiration: expirationDate.getTime()
-  };
-  
-  localStorage.setItem('salonifyUser', JSON.stringify(userDataWithExpiration));
-};
-
-/**
- * Check if user's session is expired
- */
-export const isSessionExpired = (): boolean => {
-  const userData = localStorage.getItem('salonifyUser');
-  
-  if (!userData) {
-    return true;
-  }
-  
-  try {
-    const parsedData = JSON.parse(userData);
-    const expiration = parsedData.expiration;
-    
-    if (!expiration) {
-      return false; // No expiration set (legacy data)
-    }
-    
-    return Date.now() > expiration;
-  } catch (error) {
-    console.error('Error checking session expiration:', error);
-    return true;
-  }
-};
-
-/**
- * Logout user by removing data from localStorage
- */
-export const logoutUser = (): void => {
-  localStorage.removeItem('salonifyUser');
-};
-
-/**
- * Check if a user with the given email exists (for demo purposes)
- * This simulates a check against a database
- */
-export const userExists = (email: string): boolean => {
-  if (!email) return false;
-  
-  // Normalize the email by converting to lowercase for consistency
-  const normalizedEmail = email.toLowerCase().trim();
-  
-  // For demo purposes, we're checking if the email includes specific keywords
-  // In a real app, this would check against your backend database
-  const validKeywords = ['admin', 'staff', 'manager', 'user', 'client', 'test'];
-  
-  // Check if any of the keywords are in the email
-  return validKeywords.some(keyword => normalizedEmail.includes(keyword));
-};
-
-/**
- * Validate email format
- */
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-/**
- * Validate password requirements
- */
-export const isValidPassword = (password: string): boolean => {
-  return password.length >= 6;
+export const logoutUser = async () => {
+  await supabase.auth.signOut();
 };

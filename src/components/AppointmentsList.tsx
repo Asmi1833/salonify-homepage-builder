@@ -1,567 +1,514 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, ClockIcon, Trash, Edit } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
-interface Appointment {
+import React, { useState, useEffect } from 'react';
+import { format, parseISO } from 'date-fns';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { CalendarCheck, Clock, MapPin, MoreVertical, Edit, Trash, Calendar } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser, UserRole } from '@/utils/auth';
+import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface BookingType {
   id: string;
-  date: Date;
-  time: string;
   service: string;
+  booking_date: string;
+  booking_time: string;
   stylist: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
+  status: string;
+  price: number;
+  location_id: number;
+  user_id: string;
+  payment_method: string;
+  notes?: string;
+  created_at: string;
 }
 
 interface AppointmentsListProps {
-  userId: string;
+  forRole?: UserRole;
+  userId?: string;
+  locationId?: number;
+  limit?: number;
 }
 
-const DEFAULT_APPOINTMENTS: Appointment[] = [
-  {
-    id: 'appt-1',
-    date: new Date(Date.now() + 86400000 * 2), // 2 days from now
-    time: '10:00 AM',
-    service: 'Haircut & Styling',
-    stylist: 'Emma Johnson',
-    status: 'upcoming'
-  },
-  {
-    id: 'appt-2',
-    date: new Date(Date.now() + 86400000 * 7), // 7 days from now
-    time: '2:30 PM',
-    service: 'Hair Coloring',
-    stylist: 'Michael Davis',
-    status: 'upcoming'
-  },
-  {
-    id: 'appt-3',
-    date: new Date(Date.now() - 86400000 * 3), // 3 days ago
-    time: '11:15 AM',
-    service: 'Spa Services',
-    stylist: 'Sophia Lee',
-    status: 'completed'
-  }
-];
-
 const AVAILABLE_TIMES = [
-  '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
-  '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
-  '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM'
+  '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', 
+  '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
 ];
 
-const SERVICES = [
-  'Haircut & Styling', 'Hair Coloring', 'Hair Treatment', 'Spa Services',
-  'Manicure', 'Pedicure', 'Facial', 'Makeup'
-];
+const AppointmentsList: React.FC<AppointmentsListProps> = ({ 
+  forRole = 'client',
+  userId = '',
+  locationId,
+  limit
+}) => {
+  const [appointments, setAppointments] = useState<BookingType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState('');
+  const [userRole, setUserRole] = useState<UserRole>('client');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState<BookingType | null>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [editService, setEditService] = useState('');
+  const [editStylist, setEditStylist] = useState('');
+  const [activeTab, setActiveTab] = useState('upcoming');
 
-const STYLISTS = [
-  'Emma Johnson', 'Michael Davis', 'Sophia Lee', 
-  'James Wilson', 'Olivia Smith', 'Daniel Brown'
-];
-
-const AppointmentsList: React.FC<AppointmentsListProps> = ({ userId }) => {
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [time, setTime] = useState<string>('');
-  const [service, setService] = useState<string>('');
-  const [stylist, setStylist] = useState<string>('');
-  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
-  const navigate = useNavigate();
-
+  // Fetch user and appointments on component mount
   useEffect(() => {
-    fetchAppointments();
-  }, [userId]);
+    const fetchUserAndAppointments = async () => {
+      const user = await getCurrentUser();
+      if (user) {
+        setCurrentUserId(user.id);
+        setUserRole(user.role);
+        
+        // If no specific userId is provided, use the current user's ID
+        const targetUserId = userId || user.id;
+        await fetchAppointments(targetUserId);
+      }
+    };
+    
+    fetchUserAndAppointments();
+  }, [userId, locationId]);
 
-  const fetchAppointments = async () => {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('user_id', userId)
-      .order('booking_date', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching appointments:', error);
-      return;
-    }
-
-    if (data) {
-      setAppointments(data.map(appointment => ({
-        ...appointment,
-        date: new Date(appointment.booking_date)
-      })));
+  const fetchAppointments = async (targetUserId: string) => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from('bookings')
+        .select('*')
+        .order('booking_date', { ascending: true })
+        .order('booking_time', { ascending: true });
+      
+      // Apply filters based on role and parameters
+      if (forRole === 'client') {
+        query = query.eq('user_id', targetUserId);
+      } else if ((forRole === 'staff' || forRole === 'manager') && locationId) {
+        query = query.eq('location_id', locationId);
+      }
+      
+      // Apply limit if provided
+      if (limit) {
+        query = query.limit(limit);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching appointments:', error);
+        toast.error('Failed to load appointments');
+        return;
+      }
+      
+      if (data) {
+        setAppointments(data as BookingType[]);
+      }
+    } catch (error) {
+      console.error('Error in fetchAppointments:', error);
+      toast.error('An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleBookAppointment = () => {
-    if (!date || !time || !service || !stylist) {
-      toast.error('Please fill out all fields');
-      return;
-    }
-
-    const newAppointment: Appointment = {
-      id: `appt-${Date.now()}`,
-      date,
-      time,
-      service,
-      stylist,
-      status: 'upcoming'
-    };
-
-    const updatedAppointments = [...appointments, newAppointment];
-    setAppointments(updatedAppointments);
-    saveAppointments(updatedAppointments);
-    
-    // Save notification
-    const notifications = JSON.parse(localStorage.getItem(`notifications-${userId}`) || '[]');
-    const newNotification = {
-      id: `notif-${Date.now()}`,
-      title: 'Appointment Booked',
-      message: `You've booked a ${service} appointment on ${format(date, 'PPP')} at ${time}`,
-      date: new Date(),
-      read: false
-    };
-    localStorage.setItem(`notifications-${userId}`, JSON.stringify([...notifications, newNotification]));
-    
-    toast.success('Appointment booked successfully!');
-    setIsBookingOpen(false);
-    resetForm();
-    
-    // Redirect to dashboard after booking
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 1500);
+  const handleEditBooking = (booking: BookingType) => {
+    setCurrentBooking(booking);
+    setEditDate(booking.booking_date);
+    setEditTime(booking.booking_time);
+    setEditService(booking.service);
+    setEditStylist(booking.stylist);
+    setIsEditModalOpen(true);
   };
-
-  const handleUpdateAppointment = async () => {
-    if (!editingAppointment || !date || !time || !service || !stylist) {
-      toast.error('Please fill out all fields');
-      return;
+  
+  const handleCancelBooking = async (bookingId: string) => {
+    const confirmCancel = window.confirm('Are you sure you want to cancel this appointment?');
+    if (!confirmCancel) return;
+    
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', bookingId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Appointment cancelled successfully');
+      // Update the local state to reflect the cancellation
+      setAppointments(prevAppointments => 
+        prevAppointments.map(appt => 
+          appt.id === bookingId ? { ...appt, status: 'cancelled' } : appt
+        )
+      );
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      toast.error('Failed to cancel appointment');
     }
-
+  };
+  
+  const saveEditedBooking = async () => {
+    if (!currentBooking) return;
+    
     try {
       // Format the date as a string for Supabase
-      const formattedDate = format(date, 'yyyy-MM-dd');
+      const formattedDate = format(new Date(editDate), 'yyyy-MM-dd');
       
       const { error } = await supabase
         .from('bookings')
         .update({
           booking_date: formattedDate,
-          booking_time: time,
-          service,
-          stylist
+          booking_time: editTime,
+          service: editService,
+          stylist: editStylist
         })
-        .eq('id', editingAppointment.id);
-
-      if (error) throw error;
-
-      toast.success('Appointment updated successfully!');
-      setEditingAppointment(null);
-      resetForm();
-      fetchAppointments();
+        .eq('id', currentBooking.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Appointment updated successfully');
+      setIsEditModalOpen(false);
+      
+      // Refresh appointments list
+      if (userId) {
+        fetchAppointments(userId);
+      } else {
+        fetchAppointments(currentUserId);
+      }
     } catch (error) {
-      console.error('Update error:', error);
+      console.error('Error updating appointment:', error);
       toast.error('Failed to update appointment');
     }
   };
 
-  const handleCancelAppointment = async (id: string) => {
+  // Filter appointments by status for tabs
+  const upcomingAppointments = appointments.filter(appt => appt.status !== 'cancelled' && appt.status !== 'completed');
+  const pastAppointments = appointments.filter(appt => appt.status === 'completed');
+  const cancelledAppointments = appointments.filter(appt => appt.status === 'cancelled');
+  
+  // Get the appropriate list based on active tab
+  const getAppointmentsList = () => {
+    switch (activeTab) {
+      case 'upcoming':
+        return upcomingAppointments;
+      case 'past':
+        return pastAppointments;
+      case 'cancelled':
+        return cancelledAppointments;
+      default:
+        return upcomingAppointments;
+    }
+  };
+  
+  const currentList = getAppointmentsList();
+
+  // Format date for display
+  const formatDate = (dateStr: string) => {
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'cancelled' })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast.success('Appointment cancelled successfully');
-      fetchAppointments();
+      return format(new Date(dateStr), 'MMMM d, yyyy');
     } catch (error) {
-      console.error('Cancel error:', error);
-      toast.error('Failed to cancel appointment');
+      console.error('Error formatting date:', error, dateStr);
+      return dateStr;
     }
   };
 
-  const startEditing = (appointment: Appointment) => {
-    setEditingAppointment(appointment);
-    setDate(appointment.date);
-    setTime(appointment.time);
-    setService(appointment.service);
-    setStylist(appointment.stylist);
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'completed':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  const resetForm = () => {
-    setDate(new Date());
-    setTime('');
-    setService('');
-    setStylist('');
-  };
-
-  const saveAppointments = (appointments: Appointment[]) => {
-    localStorage.setItem(`appointments-${userId}`, JSON.stringify(appointments));
-  };
-
-  const upcomingAppointments = appointments.filter(appt => 
-    appt.status === 'upcoming' && new Date(appt.date) >= new Date()
-  ).sort((a, b) => a.date.getTime() - b.date.getTime());
-  
-  const pastAppointments = appointments.filter(appt => 
-    appt.status === 'completed' || appt.status === 'cancelled' || new Date(appt.date) < new Date()
-  ).sort((a, b) => b.date.getTime() - a.date.getTime());
+  if (loading) {
+    return <div className="flex items-center justify-center py-8">Loading appointments...</div>;
+  }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">Your Appointments</h2>
-        <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-salon hover:bg-salon-dark">Book New Appointment</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Book an Appointment</DialogTitle>
-              <DialogDescription>
-                Fill in the details to book your salon appointment.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : "Select a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                      disabled={(date) => date < new Date()}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="time">Time</Label>
-                <Select value={time} onValueChange={setTime}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_TIMES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="service">Service</Label>
-                <Select value={service} onValueChange={setService}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SERVICES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="stylist">Stylist</Label>
-                <Select value={stylist} onValueChange={setStylist}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select stylist" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STYLISTS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsBookingOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                className="bg-salon hover:bg-salon-dark"
-                onClick={handleBookAppointment}
-              >
-                Book Appointment
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
-        {/* Edit Appointment Dialog */}
-        <Dialog 
-          open={editingAppointment !== null} 
-          onOpenChange={(open) => !open && setEditingAppointment(null)}
-        >
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Update Appointment</DialogTitle>
-              <DialogDescription>
-                Make changes to your appointment.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : "Select a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                      disabled={(date) => date < new Date()}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="time">Time</Label>
-                <Select value={time} onValueChange={setTime}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_TIMES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="service">Service</Label>
-                <Select value={service} onValueChange={setService}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SERVICES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="stylist">Stylist</Label>
-                <Select value={stylist} onValueChange={setStylist}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select stylist" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STYLISTS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setEditingAppointment(null)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                className="bg-salon hover:bg-salon-dark"
-                onClick={handleUpdateAppointment}
-              >
-                Update Appointment
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+      {appointments.length > 0 ? (
+        <>
+          <Tabs defaultValue="upcoming" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="upcoming">
+                Upcoming
+                {upcomingAppointments.length > 0 && (
+                  <Badge className="ml-2 bg-salon">{upcomingAppointments.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="past">
+                Past
+                {pastAppointments.length > 0 && (
+                  <Badge className="ml-2 bg-gray-500">{pastAppointments.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="cancelled">
+                Cancelled
+                {cancelledAppointments.length > 0 && (
+                  <Badge className="ml-2 bg-red-500">{cancelledAppointments.length}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-      {upcomingAppointments.length > 0 ? (
-        <div className="mb-8">
-          <h3 className="text-lg font-medium mb-4">Upcoming Appointments</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {upcomingAppointments.map((appointment) => (
-              <Card key={appointment.id}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl">{appointment.service}</CardTitle>
-                  <CardDescription>with {appointment.stylist}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="flex items-center mt-1">
-                    <CalendarIcon className="h-4 w-4 mr-2 text-salon" />
-                    <span>{format(new Date(appointment.date), 'PPP')}</span>
-                  </div>
-                  <div className="flex items-center mt-1">
-                    <ClockIcon className="h-4 w-4 mr-2 text-salon" />
-                    <span>{appointment.time}</span>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="flex items-center"
-                    onClick={() => startEditing(appointment)}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Reschedule
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    className="flex items-center"
-                    onClick={() => handleCancelAppointment(appointment.id)}
-                  >
-                    <Trash className="h-4 w-4 mr-1" />
-                    Cancel
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </div>
+            <TabsContent value="upcoming">
+              {upcomingAppointments.length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">No upcoming appointments</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {upcomingAppointments.map(appointment => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      userRole={userRole}
+                      formatDate={formatDate}
+                      getStatusBadgeColor={getStatusBadgeColor}
+                      onEdit={handleEditBooking}
+                      onCancel={handleCancelBooking}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="past">
+              {pastAppointments.length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">No past appointments</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {pastAppointments.map(appointment => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      userRole={userRole}
+                      formatDate={formatDate}
+                      getStatusBadgeColor={getStatusBadgeColor}
+                      onEdit={handleEditBooking}
+                      onCancel={handleCancelBooking}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="cancelled">
+              {cancelledAppointments.length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">No cancelled appointments</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {cancelledAppointments.map(appointment => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      userRole={userRole}
+                      formatDate={formatDate}
+                      getStatusBadgeColor={getStatusBadgeColor}
+                      onEdit={handleEditBooking}
+                      onCancel={handleCancelBooking}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* Edit Appointment Dialog */}
+          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Appointment</DialogTitle>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Date</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-time">Time</Label>
+                  <Select value={editTime} onValueChange={setEditTime}>
+                    <SelectTrigger id="edit-time">
+                      <SelectValue placeholder="Select a time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_TIMES.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-stylist">Stylist</Label>
+                  <Input
+                    id="edit-stylist"
+                    value={editStylist}
+                    onChange={(e) => setEditStylist(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-service">Service</Label>
+                  <Input
+                    id="edit-service"
+                    value={editService}
+                    onChange={(e) => setEditService(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={saveEditedBooking} className="bg-salon hover:bg-salon-dark">
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       ) : (
-        <div className="py-8 text-center bg-muted rounded-lg mb-8">
-          <h3 className="text-lg font-medium mb-2">No Upcoming Appointments</h3>
-          <p className="text-muted-foreground mb-4">Book a new appointment to get started</p>
-          <Button 
-            className="bg-salon hover:bg-salon-dark"
-            onClick={() => setIsBookingOpen(true)}
-          >
-            Book Now
+        <div className="text-center py-8">
+          <h3 className="text-lg font-medium mb-2">No Appointments Found</h3>
+          <p className="text-muted-foreground">
+            You don't have any appointments scheduled yet.
+          </p>
+          <Button className="mt-4 bg-salon hover:bg-salon-dark" asChild>
+            <a href="/locations">Book an Appointment</a>
           </Button>
         </div>
       )}
+    </div>
+  );
+};
 
-      {pastAppointments.length > 0 && (
-        <div>
-          <h3 className="text-lg font-medium mb-4">Past Appointments</h3>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Stylist</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pastAppointments.map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell className="font-medium">{appointment.service}</TableCell>
-                    <TableCell>{format(new Date(appointment.date), 'PPP')}</TableCell>
-                    <TableCell>{appointment.time}</TableCell>
-                    <TableCell>{appointment.stylist}</TableCell>
-                    <TableCell>
-                      <span className={cn(
-                        "px-2 py-1 rounded-full text-xs font-medium",
-                        appointment.status === 'completed' 
-                          ? "bg-green-100 text-green-800" 
-                          : "bg-red-100 text-red-800"
-                      )}>
-                        {appointment.status === 'completed' ? 'Completed' : 'Cancelled'}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+// Separate AppointmentCard component for better organization
+interface AppointmentCardProps {
+  appointment: BookingType;
+  userRole: UserRole;
+  formatDate: (date: string) => string;
+  getStatusBadgeColor: (status: string) => string;
+  onEdit: (booking: BookingType) => void;
+  onCancel: (bookingId: string) => void;
+}
+
+const AppointmentCard: React.FC<AppointmentCardProps> = ({
+  appointment,
+  userRole,
+  formatDate,
+  getStatusBadgeColor,
+  onEdit,
+  onCancel
+}) => {
+  return (
+    <Card key={appointment.id}>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-xl">{appointment.service}</CardTitle>
+            <CardDescription>with {appointment.stylist}</CardDescription>
+          </div>
+          <Badge className={getStatusBadgeColor(appointment.status)}>
+            {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="pb-3">
+        <div className="grid gap-2">
+          <div className="flex items-center">
+            <CalendarCheck className="h-4 w-4 mr-2 text-salon" />
+            <span>{formatDate(appointment.booking_date)}</span>
+          </div>
+          <div className="flex items-center">
+            <Clock className="h-4 w-4 mr-2 text-salon" />
+            <span>{appointment.booking_time}</span>
+          </div>
+          <div className="flex items-center">
+            <MapPin className="h-4 w-4 mr-2 text-salon" />
+            <span>Location #{appointment.location_id}</span>
           </div>
         </div>
-      )}
-    </div>
+        {appointment.notes && (
+          <div className="mt-3 pt-3 border-t border-border">
+            <p className="text-sm text-muted-foreground"><strong>Notes:</strong> {appointment.notes}</p>
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <div>
+          <span className="font-medium">${appointment.price.toFixed(2)}</span>
+          <span className="text-xs text-muted-foreground ml-1">({appointment.payment_method})</span>
+        </div>
+        
+        {appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
+          <div className="flex items-center space-x-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {(userRole === 'admin' || userRole === 'manager' || userRole === 'staff') && (
+                  <DropdownMenuItem onClick={() => onEdit(appointment)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Appointment
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => onCancel(appointment.id)} className="text-red-600">
+                  <Trash className="h-4 w-4 mr-2" />
+                  Cancel Appointment
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </CardFooter>
+    </Card>
   );
 };
 

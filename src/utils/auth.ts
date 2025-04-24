@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export type UserRole = 'admin' | 'manager' | 'client' | 'staff';
+export type UserRole = 'admin' | 'manager' | 'staff' | 'client';
 
 export interface User {
   id: string;
@@ -72,7 +72,6 @@ export const loginUser = (user: User) => {
   localStorage.setItem('salonifyUser', JSON.stringify(user));
 };
 
-// Add the missing isSessionExpired function
 export const isSessionExpired = (): boolean => {
   try {
     const storedUser = localStorage.getItem('salonifyUser');
@@ -86,4 +85,3 @@ export const isSessionExpired = (): boolean => {
     return false;
   }
 };
-

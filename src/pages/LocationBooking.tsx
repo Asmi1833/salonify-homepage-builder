@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SalonNavbar from '@/components/SalonNavbar';
@@ -143,6 +144,7 @@ const LocationBooking: React.FC = () => {
   const [stylist, setStylist] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('credit_card');
   const [isBooking, setIsBooking] = useState(false);
+  const [specialRequests, setSpecialRequests] = useState('');
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -150,6 +152,17 @@ const LocationBooking: React.FC = () => {
       if (user) {
         setName(user.name);
         setEmail(user.email);
+        
+        // Fetch additional profile data if available
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('phone_number')
+          .eq('id', user.id)
+          .single();
+          
+        if (profileData?.phone_number) {
+          setPhone(profileData.phone_number);
+        }
       }
     };
     
@@ -164,6 +177,26 @@ const LocationBooking: React.FC = () => {
     }
   }, [locationId, navigate]);
 
+  // Check for stylist availability
+  const checkStylistAvailability = async (selectedDate: string, selectedTime: string, selectedStylist: string) => {
+    if (!selectedDate || !selectedTime || !selectedStylist) return true;
+    
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('booking_date', selectedDate)
+      .eq('booking_time', selectedTime)
+      .eq('stylist', selectedStylist);
+      
+    if (error) {
+      console.error('Error checking availability:', error);
+      return true;
+    }
+    
+    // If we have a booking at this time slot for this stylist, they're not available
+    return data.length === 0;
+  };
+
   const handleBookAppointment = async () => {
     if (!isAuthenticated()) {
       toast.error("Please login to book an appointment");
@@ -177,13 +210,21 @@ const LocationBooking: React.FC = () => {
     }
 
     if (!name || !email || !phone || !date || !time || !service || !stylist) {
-      toast.error("Please fill in all fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
     setIsBooking(true);
 
     try {
+      // Check if stylist is available at the selected time
+      const isStylistAvailable = await checkStylistAvailability(date, time, stylist);
+      if (!isStylistAvailable) {
+        toast.error("This stylist is not available at the selected time. Please choose another time or stylist.");
+        setIsBooking(false);
+        return;
+      }
+      
       const user = await getCurrentUser();
       if (!user) {
         toast.error("Authentication error");
@@ -192,7 +233,8 @@ const LocationBooking: React.FC = () => {
 
       const serviceDetails = SERVICE_PRICES[service as keyof typeof SERVICE_PRICES];
       
-      const { error } = await supabase
+      // Create the booking in Supabase
+      const { data, error } = await supabase
         .from('bookings')
         .insert({
           user_id: user.id,
@@ -203,15 +245,31 @@ const LocationBooking: React.FC = () => {
           stylist,
           payment_method: paymentMethod,
           price: serviceDetails.price,
-          notes: ''
-        });
+          notes: specialRequests || ''
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
+      // Update the user's phone number in their profile if it has changed
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ phone_number: phone })
+        .eq('id', user.id);
+        
+      if (profileError) {
+        console.error('Error updating phone number:', profileError);
+        // Continue anyway, this is not critical
+      }
 
       toast.success("Appointment booked successfully!");
       
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/dashboard', { 
+          state: { bookingConfirmed: true, bookingDetails: data[0] }
+        });
       }, 1000);
     } catch (error) {
       console.error('Booking error:', error);
@@ -364,6 +422,16 @@ const LocationBooking: React.FC = () => {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="specialRequests">Special Requests/Notes</Label>
+                      <Input
+                        id="specialRequests"
+                        placeholder="Add any special requests or preferences"
+                        value={specialRequests}
+                        onChange={(e) => setSpecialRequests(e.target.value)}
+                      />
                     </div>
                     
                     <div className="space-y-3">

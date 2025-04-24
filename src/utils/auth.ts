@@ -128,12 +128,28 @@ export const logoutUser = (): void => {
 export const userExists = (email: string): boolean => {
   if (!email) return false;
   
+  // Normalize the email by converting to lowercase for consistency
+  const normalizedEmail = email.toLowerCase().trim();
+  
   // For demo purposes, we're checking if the email includes specific keywords
   // In a real app, this would check against your backend database
-  return email.includes('admin') || 
-         email.includes('staff') || 
-         email.includes('manager') || 
-         email.includes('user') ||
-         email.includes('client') ||
-         email.includes('test');
+  const validKeywords = ['admin', 'staff', 'manager', 'user', 'client', 'test'];
+  
+  // Check if any of the keywords are in the email
+  return validKeywords.some(keyword => normalizedEmail.includes(keyword));
+};
+
+/**
+ * Validate email format
+ */
+export const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+/**
+ * Validate password requirements
+ */
+export const isValidPassword = (password: string): boolean => {
+  return password.length >= 6;
 };

@@ -9,7 +9,7 @@ import SalonifyLogo from '@/components/SalonifyLogo';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { loginUser, isSessionExpired, UserRole, userExists } from '@/utils/auth';
+import { loginUser, isSessionExpired, UserRole, userExists, isValidEmail, isValidPassword } from '@/utils/auth';
 import { 
   Select,
   SelectContent,
@@ -48,19 +48,23 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
 
-    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const isValidPassword = password.length >= 6;
+    // Use the utility functions for validation
+    const validEmail = isValidEmail(email);
+    const validPassword = isValidPassword(password);
 
     setTimeout(() => {
-      if (isValidEmail && isValidPassword) {
+      if (validEmail && validPassword) {
+        // Check if user account exists - in demo mode we'll always allow access with specific roles
         const userAccountExists = demoMode || userExists(email);
         
         if (userAccountExists) {
           let role: UserRole = 'client';
           
           if (demoMode) {
+            // Demo mode uses the selected role
             role = demoRole;
           } else {
+            // Try to detect role from email
             if (email.includes('admin')) {
               role = 'admin';
             } else if (email.includes('staff')) {
@@ -70,6 +74,7 @@ const Login: React.FC = () => {
             }
           }
           
+          // Create user object
           const user = {
             id: `user-${Date.now()}`,
             email,
@@ -86,6 +91,7 @@ const Login: React.FC = () => {
             duration: 3000
           });
           
+          // Redirect based on role or previous location
           if (role === 'admin') {
             navigate('/admin');
           } else if (role === 'staff') {
@@ -98,12 +104,13 @@ const Login: React.FC = () => {
             navigate('/');
           }
         } else {
+          // Account doesn't exist
           sonnerToast.error("Account not found", {
-            description: "No account exists with this email. Please sign up first.",
+            description: "No account exists with this email. You need to sign up first.",
             duration: 5000
           });
           
-          // Show a prompt to redirect to sign up page
+          // Show a prompt to redirect to sign up page with a slight delay
           setTimeout(() => {
             sonnerToast.warning("Create an account", {
               description: "Would you like to create a new account with this email?",
@@ -116,12 +123,13 @@ const Login: React.FC = () => {
           }, 1000);
         }
       } else {
-        if (!isValidEmail) {
+        // Show appropriate validation errors
+        if (!validEmail) {
           sonnerToast.error("Invalid email", {
             description: "Please enter a valid email address",
             duration: 3000
           });
-        } else if (!isValidPassword) {
+        } else if (!validPassword) {
           sonnerToast.error("Invalid password", {
             description: "Password must be at least 6 characters long",
             duration: 3000

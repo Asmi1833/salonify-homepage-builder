@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -9,7 +8,14 @@ import SalonifyLogo from '@/components/SalonifyLogo';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { loginUser, isSessionExpired, UserRole, userExists, isValidEmail, isValidPassword } from '@/utils/auth';
+import { 
+  UserRole, 
+  isSessionExpired, 
+  loginUser, 
+  userExists, 
+  isValidEmail, 
+  isValidPassword 
+} from '@/utils/auth';
 import { 
   Select,
   SelectContent,

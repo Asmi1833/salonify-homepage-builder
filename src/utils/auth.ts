@@ -63,3 +63,73 @@ export const hasRole = async (allowedRoles: UserRole | UserRole[]): Promise<bool
 export const logoutUser = async () => {
   await supabase.auth.signOut();
 };
+
+/**
+ * Check if login session is expired
+ */
+export const isSessionExpired = (): boolean => {
+  const expiryStr = localStorage.getItem('supabase.auth.token.expires_at');
+  if (!expiryStr) return true;
+
+  const expiryTime = parseInt(expiryStr, 10);
+  return Date.now() >= expiryTime;
+};
+
+/**
+ * Login user and store their data
+ */
+export const loginUser = (user: User) => {
+  localStorage.setItem('salonifyUser', JSON.stringify({
+    ...user,
+    expiresAt: Date.now() + 1000 * 60 * 60 * 24 // 24 hours expiration
+  }));
+};
+
+/**
+ * Check if a user with given email exists
+ */
+export const userExists = (email: string): boolean => {
+  // In a real app, this would check the database
+  // For demo purposes, we'll consider certain email patterns exist
+  return email.includes('admin') || 
+         email.includes('staff') || 
+         email.includes('manager') || 
+         email.includes('user') ||
+         email.includes('example');
+};
+
+/**
+ * Validate email format
+ */
+export const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+/**
+ * Validate password requirements
+ */
+export const isValidPassword = (password: string): boolean => {
+  return password.length >= 6;
+};
+
+/**
+ * Require auth for a route and redirect if not authenticated
+ */
+export const requireAuth = (
+  navigate: (path: string, state?: any) => void,
+  redirectTo: string,
+  message: string
+): boolean => {
+  if (!isAuthenticated()) {
+    navigate('/login', { 
+      state: { 
+        from: redirectTo,
+        message 
+      }
+    });
+    return false;
+  }
+  return true;
+};
+

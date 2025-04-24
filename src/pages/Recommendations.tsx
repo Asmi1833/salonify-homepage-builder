@@ -8,7 +8,7 @@ import HairStyleRecommendations from '@/components/HairStyleRecommendations';
 import HairColorRecommendations from '@/components/HairColorRecommendations';
 import NailDesignRecommendations from '@/components/NailDesignRecommendations';
 import { toast } from '@/components/ui/use-toast';
-import { isAuthenticated, requireAuth, isSessionExpired } from '@/utils/auth';
+import { isAuthenticated, isSessionExpired } from '@/utils/auth';
 
 const Recommendations: React.FC = () => {
   const [activeTab, setActiveTab] = useState('hairstyles');
@@ -28,33 +28,30 @@ const Recommendations: React.FC = () => {
     }
     
     // Check if user is logged in when component mounts
-    if (!isAuthenticated()) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign up or login to access personalized recommendations",
-        variant: "destructive"
-      });
-      navigate('/login', { 
-        state: { 
-          from: '/recommendations',
-          message: "Please login to access personalized style recommendations" 
-        }
-      });
-    }
+    const checkAuth = async () => {
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign up or login to access personalized recommendations",
+          variant: "destructive"
+        });
+        navigate('/login', { 
+          state: { 
+            from: '/recommendations',
+            message: "Please login to access personalized style recommendations" 
+          }
+        });
+      }
+    };
+    
+    checkAuth();
   }, [navigate]);
 
   // Handle tab change
   const handleTabChange = (value: string) => {
-    // Check authentication before allowing tab changes
-    if (requireAuth(navigate, '/recommendations', "Please login to view style recommendations")) {
-      setActiveTab(value);
-    }
+    setActiveTab(value);
   };
-
-  // If not authenticated, don't render the content
-  if (!isAuthenticated()) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen flex flex-col">

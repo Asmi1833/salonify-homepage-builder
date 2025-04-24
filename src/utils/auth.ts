@@ -41,7 +41,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
     id: user.id,
     email: user.email || '',
     name: profileData.name,
-    role: profileData.role,
+    role: profileData.role as UserRole,
     profileImage: profileData.profile_image || ''
   };
 };
@@ -132,4 +132,3 @@ export const requireAuth = (
   }
   return true;
 };
-

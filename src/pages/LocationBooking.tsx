@@ -146,11 +146,15 @@ const LocationBooking: React.FC = () => {
 
   useEffect(() => {
     // Check for existing user data to prefill
-    const user = getCurrentUser();
-    if (user) {
-      setName(user.name);
-      setEmail(user.email);
-    }
+    const fetchUserData = async () => {
+      const user = await getCurrentUser();
+      if (user) {
+        setName(user.name);
+        setEmail(user.email);
+      }
+    };
+    
+    fetchUserData();
     
     // Find location by ID
     const locationData = SALON_LOCATIONS.find(loc => loc.id === Number(locationId));
@@ -162,9 +166,10 @@ const LocationBooking: React.FC = () => {
     }
   }, [locationId, navigate]);
 
-  const handleBookAppointment = () => {
+  const handleBookAppointment = async () => {
     // Check if user is authenticated
-    if (!isAuthenticated()) {
+    const authenticated = await isAuthenticated();
+    if (!authenticated) {
       toast.error("Please login to book an appointment");
       navigate('/login', { 
         state: { 
@@ -184,9 +189,9 @@ const LocationBooking: React.FC = () => {
     setIsBooking(true);
 
     // Simulate booking process
-    setTimeout(() => {
+    setTimeout(async () => {
       // Get the logged in user
-      const user = getCurrentUser();
+      const user = await getCurrentUser();
       const userId = user ? user.email : 'guest';
 
       // Get service details

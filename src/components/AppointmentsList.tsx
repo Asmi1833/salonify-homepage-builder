@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -42,6 +41,7 @@ import {
 } from '@/components/ui/table';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Appointment {
   id: string;
@@ -100,7 +100,7 @@ const STYLISTS = [
 ];
 
 const AppointmentsList: React.FC<AppointmentsListProps> = ({ userId }) => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [time, setTime] = useState<string>('');
@@ -109,24 +109,28 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({ userId }) => {
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const navigate = useNavigate();
 
-  // Fetch appointments (simulated)
   useEffect(() => {
-    const savedAppointments = localStorage.getItem(`appointments-${userId}`);
-    if (savedAppointments) {
-      const parsedAppointments = JSON.parse(savedAppointments, (key, value) => {
-        if (key === 'date') return new Date(value);
-        return value;
-      });
-      setAppointments(parsedAppointments);
-    } else {
-      // For demo purposes, set default appointments
-      setAppointments(DEFAULT_APPOINTMENTS);
-      saveAppointments(DEFAULT_APPOINTMENTS);
-    }
+    fetchAppointments();
   }, [userId]);
 
-  const saveAppointments = (appointments: Appointment[]) => {
-    localStorage.setItem(`appointments-${userId}`, JSON.stringify(appointments));
+  const fetchAppointments = async () => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('user_id', userId)
+      .order('booking_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching appointments:', error);
+      return;
+    }
+
+    if (data) {
+      setAppointments(data.map(appointment => ({
+        ...appointment,
+        date: new Date(appointment.booking_date)
+      })));
+    }
   };
 
   const handleBookAppointment = () => {
@@ -169,62 +173,50 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({ userId }) => {
     }, 1500);
   };
 
-  const handleUpdateAppointment = () => {
+  const handleUpdateAppointment = async () => {
     if (!editingAppointment || !date || !time || !service || !stylist) {
       toast.error('Please fill out all fields');
       return;
     }
 
-    const updatedAppointments = appointments.map(appointment => 
-      appointment.id === editingAppointment.id 
-        ? { ...appointment, date, time, service, stylist }
-        : appointment
-    );
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          booking_date: date,
+          booking_time: time,
+          service,
+          stylist
+        })
+        .eq('id', editingAppointment.id);
 
-    setAppointments(updatedAppointments);
-    saveAppointments(updatedAppointments);
-    
-    // Save notification
-    const notifications = JSON.parse(localStorage.getItem(`notifications-${userId}`) || '[]');
-    const newNotification = {
-      id: `notif-${Date.now()}`,
-      title: 'Appointment Updated',
-      message: `Your ${service} appointment has been rescheduled to ${format(date, 'PPP')} at ${time}`,
-      date: new Date(),
-      read: false
-    };
-    localStorage.setItem(`notifications-${userId}`, JSON.stringify([...notifications, newNotification]));
-    
-    toast.success('Appointment updated successfully!');
-    setEditingAppointment(null);
-    resetForm();
+      if (error) throw error;
+
+      toast.success('Appointment updated successfully!');
+      setEditingAppointment(null);
+      resetForm();
+      fetchAppointments();
+    } catch (error) {
+      console.error('Update error:', error);
+      toast.error('Failed to update appointment');
+    }
   };
 
-  const handleCancelAppointment = (id: string) => {
-    const appointmentToCancel = appointments.find(appt => appt.id === id);
-    if (!appointmentToCancel) return;
+  const handleCancelAppointment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', id);
 
-    const updatedAppointments = appointments.map(appointment => 
-      appointment.id === id 
-        ? { ...appointment, status: 'cancelled' as const }
-        : appointment
-    );
+      if (error) throw error;
 
-    setAppointments(updatedAppointments);
-    saveAppointments(updatedAppointments);
-    
-    // Save notification
-    const notifications = JSON.parse(localStorage.getItem(`notifications-${userId}`) || '[]');
-    const newNotification = {
-      id: `notif-${Date.now()}`,
-      title: 'Appointment Cancelled',
-      message: `Your ${appointmentToCancel.service} appointment on ${format(appointmentToCancel.date, 'PPP')} has been cancelled`,
-      date: new Date(),
-      read: false
-    };
-    localStorage.setItem(`notifications-${userId}`, JSON.stringify([...notifications, newNotification]));
-    
-    toast.success('Appointment cancelled successfully');
+      toast.success('Appointment cancelled successfully');
+      fetchAppointments();
+    } catch (error) {
+      console.error('Cancel error:', error);
+      toast.error('Failed to cancel appointment');
+    }
   };
 
   const startEditing = (appointment: Appointment) => {
@@ -240,6 +232,10 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({ userId }) => {
     setTime('');
     setService('');
     setStylist('');
+  };
+
+  const saveAppointments = (appointments: Appointment[]) => {
+    localStorage.setItem(`appointments-${userId}`, JSON.stringify(appointments));
   };
 
   const upcomingAppointments = appointments.filter(appt => 

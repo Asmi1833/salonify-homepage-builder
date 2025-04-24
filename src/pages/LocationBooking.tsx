@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SalonNavbar from '@/components/SalonNavbar';
@@ -12,6 +11,7 @@ import { toast } from 'sonner';
 import { MapPin, Phone, Clock, CalendarCheck, Scissors, User, Mail, CreditCard } from 'lucide-react';
 import { isAuthenticated, getCurrentUser } from '@/utils/auth';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { supabase } from '@/integrations/supabase/client';
 
 const SALON_LOCATIONS = [
   {
@@ -145,7 +145,6 @@ const LocationBooking: React.FC = () => {
   const [isBooking, setIsBooking] = useState(false);
 
   useEffect(() => {
-    // Check for existing user data to prefill
     const fetchUserData = async () => {
       const user = await getCurrentUser();
       if (user) {
@@ -156,7 +155,6 @@ const LocationBooking: React.FC = () => {
     
     fetchUserData();
     
-    // Find location by ID
     const locationData = SALON_LOCATIONS.find(loc => loc.id === Number(locationId));
     if (locationData) {
       setLocation(locationData);
@@ -167,9 +165,7 @@ const LocationBooking: React.FC = () => {
   }, [locationId, navigate]);
 
   const handleBookAppointment = async () => {
-    // Check if user is authenticated
-    const authenticated = await isAuthenticated();
-    if (!authenticated) {
+    if (!isAuthenticated()) {
       toast.error("Please login to book an appointment");
       navigate('/login', { 
         state: { 
@@ -180,7 +176,6 @@ const LocationBooking: React.FC = () => {
       return;
     }
 
-    // Validate inputs
     if (!name || !email || !phone || !date || !time || !service || !stylist) {
       toast.error("Please fill in all fields");
       return;
@@ -188,71 +183,42 @@ const LocationBooking: React.FC = () => {
 
     setIsBooking(true);
 
-    // Simulate booking process
-    setTimeout(async () => {
-      // Get the logged in user
+    try {
       const user = await getCurrentUser();
-      const userId = user ? user.email : 'guest';
+      if (!user) {
+        toast.error("Authentication error");
+        return;
+      }
 
-      // Get service details
       const serviceDetails = SERVICE_PRICES[service as keyof typeof SERVICE_PRICES];
       
-      // Save appointment
-      const appointments = JSON.parse(localStorage.getItem(`appointments-${userId}`) || '[]');
-      const newAppointment = {
-        id: `appt-${Date.now()}`,
-        locationId: Number(locationId),
-        locationName: location.name,
-        date: new Date(date),
-        time,
-        service: serviceDetails.name,
-        stylist,
-        price: serviceDetails.price,
-        paymentMethod,
-        status: 'upcoming'
-      };
-      
-      localStorage.setItem(`appointments-${userId}`, JSON.stringify([...appointments, newAppointment]));
-      
-      // Create notification for customer
-      const notifications = JSON.parse(localStorage.getItem(`notifications-${userId}`) || '[]');
-      const newNotification = {
-        id: `notif-${Date.now()}`,
-        title: 'New Appointment Booked',
-        message: `Your ${serviceDetails.name} appointment has been scheduled for ${new Date(date).toLocaleDateString()} at ${time} with ${stylist} at ${location.name}.`,
-        date: new Date(),
-        read: false
-      };
-      
-      localStorage.setItem(`notifications-${userId}`, JSON.stringify([...notifications, newNotification]));
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          location_id: Number(locationId),
+          service: serviceDetails.name,
+          booking_date: date,
+          booking_time: time,
+          stylist,
+          payment_method: paymentMethod,
+          price: serviceDetails.price,
+          notes: ''
+        });
 
-      // Create notification for stylist (in real app this would be for the actual stylist's account)
-      const stylistName = stylist.split(' ')[0].toLowerCase();
-      const stylistNotifications = JSON.parse(localStorage.getItem(`notifications-${stylistName}@salonify.com`) || '[]');
-      const newStylistNotification = {
-        id: `notif-${Date.now() + 1}`,
-        title: 'New Customer Appointment',
-        message: `${name} has booked a ${serviceDetails.name} appointment for ${new Date(date).toLocaleDateString()} at ${time}.`,
-        date: new Date(),
-        read: false,
-        customerInfo: {
-          name,
-          email,
-          phone
-        }
-      };
-      
-      localStorage.setItem(`notifications-${stylistName}@salonify.com`, JSON.stringify([...stylistNotifications, newStylistNotification]));
+      if (error) throw error;
 
       toast.success("Appointment booked successfully!");
       
-      // Redirect after booking
       setTimeout(() => {
         navigate('/dashboard');
       }, 1000);
-      
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast.error("Failed to book appointment. Please try again.");
+    } finally {
       setIsBooking(false);
-    }, 1500);
+    }
   };
 
   if (!location) {

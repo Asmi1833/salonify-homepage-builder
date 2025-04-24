@@ -180,10 +180,13 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({ userId }) => {
     }
 
     try {
+      // Format the date as a string for Supabase
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      
       const { error } = await supabase
         .from('bookings')
         .update({
-          booking_date: date,
+          booking_date: formattedDate,
           booking_time: time,
           service,
           stylist

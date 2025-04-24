@@ -72,3 +72,18 @@ export const loginUser = (user: User) => {
   localStorage.setItem('salonifyUser', JSON.stringify(user));
 };
 
+// Add the missing isSessionExpired function
+export const isSessionExpired = (): boolean => {
+  try {
+    const storedUser = localStorage.getItem('salonifyUser');
+    if (!storedUser) return false;
+    
+    // In a real app with JWT, we would check the token expiration
+    // For now, let's just assume sessions never expire automatically
+    return false;
+  } catch (error) {
+    console.error('Error checking session expiration:', error);
+    return false;
+  }
+};
+
